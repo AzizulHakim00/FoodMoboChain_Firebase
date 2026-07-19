@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  issues: write
 
 jobs:
   build-and-release:
@@ -26,54 +27,61 @@ jobs:
         uses: android-actions/setup-android@v3
 
       - name: Install Android SDK 36
-        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+        run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
 
-      - name: Install Gradle 8.13
+      - name: Configure Gradle cache
         uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: "8.13"
-
-      - name: Restore missing Gradle wrapper
-        id: wrapper
-        run: |
-          if [ ! -f gradle/wrapper/gradle-wrapper.jar ]; then
-            gradle wrapper --gradle-version 8.13
-            echo "created=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "created=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Commit restored wrapper
-        if: steps.wrapper.outputs.created == 'true'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add gradle/wrapper/gradle-wrapper.jar gradle/wrapper/gradle-wrapper.properties gradlew gradlew.bat
-          git commit -m "Restore Gradle wrapper"
-          git push
-
-      - name: Stop after wrapper restoration
-        if: steps.wrapper.outputs.created == 'true'
-        run: exit 0
 
       - name: Make Gradle wrapper executable
-        if: steps.wrapper.outputs.created == 'false'
         run: chmod +x gradlew
 
       - name: Run unit tests
-        if: steps.wrapper.outputs.created == 'false'
-        run: ./gradlew testDebugUnitTest --stacktrace
+        id: tests
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          ./gradlew testDebugUnitTest --stacktrace 2>&1 | tee test-output.log
 
       - name: Build installable debug APK
-        if: steps.wrapper.outputs.created == 'false'
-        run: ./gradlew assembleDebug --stacktrace
+        id: build
+        if: steps.tests.outcome == 'success'
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          ./gradlew assembleDebug --stacktrace 2>&1 | tee build-output.log
+
+      - name: Report build failure
+        if: steps.tests.outcome == 'failure' || steps.build.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo "The automated Android build failed for commit \`${GITHUB_SHA}\`."
+            echo
+            echo "## Unit-test output"
+            echo '```text'
+            tail -n 160 test-output.log 2>/dev/null || true
+            echo '```'
+            echo
+            echo "## APK-build output"
+            echo '```text'
+            tail -n 200 build-output.log 2>/dev/null || true
+            echo '```'
+          } > build-failure.md
+          gh issue create \
+            --title "Android build failed: ${GITHUB_SHA::7}" \
+            --body-file build-failure.md
+
+      - name: Stop failed build
+        if: steps.tests.outcome == 'failure' || steps.build.outcome == 'failure'
+        run: exit 1
 
       - name: Prepare APK
-        if: steps.wrapper.outputs.created == 'false'
+        if: steps.tests.outcome == 'success' && steps.build.outcome == 'success'
         run: cp app/build/outputs/apk/debug/app-debug.apk FoodMoboChain-v1.0.0-debug.apk
 
       - name: Upload workflow artifact
-        if: steps.wrapper.outputs.created == 'false'
+        if: steps.tests.outcome == 'success' && steps.build.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: FoodMoboChain-debug-apk
@@ -81,7 +89,7 @@ jobs:
           if-no-files-found: error
 
       - name: Publish GitHub prerelease
-        if: steps.wrapper.outputs.created == 'false'
+        if: steps.tests.outcome == 'success' && steps.build.outcome == 'success'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
