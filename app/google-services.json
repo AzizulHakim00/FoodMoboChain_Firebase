@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "886670057857",
+    "firebase_url": "https://foodmobochaindb-default-rtdb.firebaseio.com",
+    "project_id": "foodmobochaindb",
+    "storage_bucket": "foodmobochaindb.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:886670057857:android:d170b8804d8ed3d6c1c880",
+        "android_client_info": {
+          "package_name": "com.example.foodmobochain"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCz1wxa1_GABEuuccxm_3UssHQ-mxQb5a4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

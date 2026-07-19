@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="brand_green">#1F7A53</color>
+    <color name="brand_green_dark">#13543A</color>
+    <color name="brand_green_soft">#EAF4EA</color>
+    <color name="brand_ink">#17221C</color>
+    <color name="brand_muted">#66706A</color>
+    <color name="brand_cream">#FBFAF5</color>
+    <color name="brand_white">#FFFFFFFF</color>
+    <color name="brand_orange">#F47B45</color>
+    <color name="brand_lime">#DDF061</color>
+    <color name="brand_border">#DDE3DC</color>
+    <color name="brand_danger">#B42318</color>
+</resources>

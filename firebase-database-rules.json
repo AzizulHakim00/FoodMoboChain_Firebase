@@ -1,0 +1,117 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "users": {
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || (auth.token.email === 'mdomor01815@gmail.com' && auth.token.email_verified === true))",
+        ".write": "auth != null && (auth.uid === $uid || (auth.token.email === 'mdomor01815@gmail.com' && auth.token.email_verified === true))",
+        "role": {
+          ".validate": "newData.isString() && (data.val() === newData.val() || (!data.exists() && (newData.val() === 'buyer' || newData.val() === 'vendor' || newData.val() === 'student')) || (auth.token.email === 'mdomor01815@gmail.com' && auth.token.email_verified === true && newData.val() === 'admin'))"
+        },
+        "status": {
+          ".validate": "newData.isString() && (data.val() === newData.val() || (!data.exists() && (newData.val() === 'active' || newData.val() === 'pending')) || (auth.token.email === 'mdomor01815@gmail.com' && auth.token.email_verified === true))"
+        },
+        "rating": {
+          ".write": "auth != null",
+          ".validate": "newData.isNumber() && root.child('ratingStats').child($uid).child('count').val() > 0 && newData.val() === root.child('ratingStats').child($uid).child('sum').val() / root.child('ratingStats').child($uid).child('count').val()"
+        }
+      }
+    },
+    "foods": {
+      ".read": "auth != null",
+      ".indexOn": ["vendorId", "category", "available"],
+      "$foodId": {
+        ".write": "auth != null && ((auth.token.email === 'mdomor01815@gmail.com' && auth.token.email_verified === true) || (((newData.exists() && newData.child('vendorId').val() === auth.uid) || (!newData.exists() && data.child('vendorId').val() === auth.uid)) && root.child('users').child(auth.uid).child('role').val() === 'vendor' && (root.child('users').child(auth.uid).child('status').val() === 'approved' || root.child('users').child(auth.uid).child('status').val() === 'active')))"
+      }
+    },
+    "carts": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "orders": {
+      "$orderId": {
+        ".read": "auth != null && (data.child('buyerId').val() === auth.uid || root.child('vendorOrders').child(auth.uid).child($orderId).exists() || (auth.token.email === 'mdomor01815@gmail.com' && auth.token.email_verified === true))",
+        ".write": "auth != null && ((newData.child('buyerId').val() === auth.uid) || root.child('vendorOrders').child(auth.uid).child($orderId).exists() || (auth.token.email === 'mdomor01815@gmail.com' && auth.token.email_verified === true))"
+      }
+    },
+    "userOrders": {
+      "$uid": {
+        "$orderId": {
+          ".read": "auth != null && (auth.uid === $uid || root.child('vendorOrders').child(auth.uid).child($orderId).exists() || (auth.token.email === 'mdomor01815@gmail.com' && auth.token.email_verified === true))",
+          ".write": "auth != null && (auth.uid === $uid || root.child('vendorOrders').child(auth.uid).child($orderId).exists() || (auth.token.email === 'mdomor01815@gmail.com' && auth.token.email_verified === true))"
+        }
+      }
+    },
+    "vendorOrders": {
+      "$vendorId": {
+        "$orderId": {
+          ".read": "auth != null && (auth.uid === $vendorId || (auth.token.email === 'mdomor01815@gmail.com' && auth.token.email_verified === true))",
+          ".write": "auth != null && (auth.uid === $vendorId || newData.child('buyerId').val() === auth.uid || (auth.token.email === 'mdomor01815@gmail.com' && auth.token.email_verified === true))"
+        }
+      }
+    },
+    "rentalCarts": {
+      ".read": "auth != null",
+      ".write": "auth != null && auth.token.email === 'mdomor01815@gmail.com' && auth.token.email_verified === true"
+    },
+    "rentalLocks": {
+      ".read": "auth != null",
+      "$cartId": {
+        ".write": "auth != null && newData.child('userId').val() === auth.uid",
+        ".validate": "newData.hasChildren(['bookingId', 'userId', 'reservedUntil']) && newData.child('reservedUntil').isNumber()"
+      }
+    },
+    "rentalBookings": {
+      ".indexOn": ["userId"],
+      "$bookingId": {
+        ".read": "auth != null && (data.child('userId').val() === auth.uid || (auth.token.email === 'mdomor01815@gmail.com' && auth.token.email_verified === true))",
+        ".write": "auth != null && (newData.child('userId').val() === auth.uid || (auth.token.email === 'mdomor01815@gmail.com' && auth.token.email_verified === true))"
+      }
+    },
+    "userRentalBookings": {
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || (auth.token.email === 'mdomor01815@gmail.com' && auth.token.email_verified === true))",
+        ".write": "auth != null && (auth.uid === $uid || (auth.token.email === 'mdomor01815@gmail.com' && auth.token.email_verified === true))"
+      }
+    },
+    "training": {
+      ".read": "auth != null",
+      "$resourceId": {
+        ".write": "auth != null && ((newData.exists() && newData.child('uploaderId').val() === auth.uid) || (!newData.exists() && data.child('uploaderId').val() === auth.uid) || (auth.token.email === 'mdomor01815@gmail.com' && auth.token.email_verified === true))"
+      }
+    },
+    "newsfeed": {
+      ".read": "auth != null",
+      "$postId": {
+        ".write": "auth != null && ((newData.exists() && newData.child('authorId').val() === auth.uid) || (!newData.exists() && data.child('authorId').val() === auth.uid) || (auth.token.email === 'mdomor01815@gmail.com' && auth.token.email_verified === true))"
+      }
+    },
+    "reviews": {
+      ".read": "auth != null",
+      "$reviewId": {
+        ".write": "auth != null && !data.exists() && newData.child('authorId').val() === auth.uid"
+      }
+    },
+    "ratingStats": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "auth != null"
+      }
+    },
+    "flags": {
+      ".read": "auth != null && auth.token.email === 'mdomor01815@gmail.com' && auth.token.email_verified === true",
+      "$flagId": {
+        ".write": "auth != null && ((!data.exists() && newData.child('reportedBy').val() === auth.uid) || (auth.token.email === 'mdomor01815@gmail.com' && auth.token.email_verified === true))"
+      }
+    },
+    "vendorApplications": {
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || (auth.token.email === 'mdomor01815@gmail.com' && auth.token.email_verified === true))",
+        ".write": "auth != null && (auth.uid === $uid || (auth.token.email === 'mdomor01815@gmail.com' && auth.token.email_verified === true))"
+      }
+    }
+  }
+}

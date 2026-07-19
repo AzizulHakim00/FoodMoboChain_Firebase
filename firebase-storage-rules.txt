@@ -1,0 +1,28 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && request.auth.token.email == 'mdomor01815@gmail.com'
+        && request.auth.token.email_verified == true;
+    }
+
+    match /documents/{userId}/{allFiles=**} {
+      allow read: if signedIn() && (request.auth.uid == userId || isAdmin());
+      allow write: if signedIn() && request.auth.uid == userId
+        && request.resource.size < 10 * 1024 * 1024;
+    }
+
+    match /tutorials/{userId}/{allFiles=**} {
+      allow read: if signedIn();
+      allow write: if signedIn() && request.auth.uid == userId
+        && request.resource.size < 100 * 1024 * 1024
+        && request.resource.contentType.matches('video/.*');
+    }
+  }
+}
