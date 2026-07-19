@@ -10,7 +10,25 @@ permissions:
   issues: write
 
 jobs:
+  backend-validation:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: functions
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm install --no-audit --no-fund
+      - run: npm run lint
+      - run: npm test
+      - name: Validate Realtime Database rules
+        working-directory: .
+        run: ./functions/node_modules/.bin/firebase emulators:exec --only database "npm --prefix functions run test:rules" --project demo-foodmobo
+
   build-and-release:
+    needs: backend-validation
     runs-on: ubuntu-latest
 
     steps:
@@ -78,14 +96,14 @@ jobs:
 
       - name: Prepare APK
         if: steps.tests.outcome == 'success' && steps.build.outcome == 'success'
-        run: cp app/build/outputs/apk/debug/app-debug.apk FoodMoboChain-v1.0.0-debug.apk
+        run: cp app/build/outputs/apk/debug/app-debug.apk FoodMoboChain-v1.1.0-debug.apk
 
       - name: Upload workflow artifact
         if: steps.tests.outcome == 'success' && steps.build.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: FoodMoboChain-debug-apk
-          path: FoodMoboChain-v1.0.0-debug.apk
+          name: FoodMoboChain-v1.1.0-debug-apk
+          path: FoodMoboChain-v1.1.0-debug.apk
           if-no-files-found: error
 
       - name: Publish GitHub prerelease
@@ -93,12 +111,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh release view v1.0.0 >/dev/null 2>&1; then
-            gh release upload v1.0.0 FoodMoboChain-v1.0.0-debug.apk --clobber
+          if gh release view v1.1.0 >/dev/null 2>&1; then
+            gh release upload v1.1.0 FoodMoboChain-v1.1.0-debug.apk --clobber
           else
-            gh release create v1.0.0 FoodMoboChain-v1.0.0-debug.apk \
+            gh release create v1.1.0 FoodMoboChain-v1.1.0-debug.apk \
               --target "$GITHUB_SHA" \
-              --title "FoodMoboChain v1.0.0 Developer Preview" \
-              --notes "Installable developer-preview APK built automatically from the main branch. This APK is debug-signed and intended for testing or academic demonstration." \
+              --title "FoodMoboChain v1.1.0 Security Preview" \
+              --notes "Security-focused developer preview with trusted Firebase Functions operations, hardened rules and App Check integration. This APK is debug-signed and intended for testing or academic demonstration." \
               --prerelease
           fi
