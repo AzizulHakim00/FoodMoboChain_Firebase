@@ -12,7 +12,7 @@ permissions:
   issues: write
 
 env:
-  FIREBASE_PROJECT_ID: foodmobochaindb
+  FIREBASE_PROJECT_ID: foodmobochaindb-c36f5
   ADMIN_EMAIL: mdomor01815@gmail.com
 
 jobs:
