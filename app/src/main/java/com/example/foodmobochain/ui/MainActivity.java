@@ -2,6 +2,7 @@ package com.example.foodmobochain.ui;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -78,7 +79,7 @@ public class MainActivity extends BaseScreenActivity {
                 content.addView(pending);
             }
         }
-        if ("admin".equals(user.role) || firebase.isAdminEmail(user.email)) {
+        if ("admin".equals(user.role)) {
             addAction("Admin control", "Approve vendors, moderate flags and create starter content.", AdminActivity.class);
         }
 
