@@ -7,22 +7,33 @@ service firebase.storage {
     }
 
     function isAdmin() {
+      return signedIn() && request.auth.token.admin == true;
+    }
+
+    function isVendor() {
       return signedIn()
-        && request.auth.token.email == 'mdomor01815@gmail.com'
-        && request.auth.token.email_verified == true;
+        && request.auth.token.vendor == true
+        && request.auth.token.role == 'vendor';
     }
 
     match /documents/{userId}/{allFiles=**} {
       allow read: if signedIn() && (request.auth.uid == userId || isAdmin());
-      allow write: if signedIn() && request.auth.uid == userId
-        && request.resource.size < 10 * 1024 * 1024;
+      allow create, update: if signedIn()
+        && request.auth.uid == userId
+        && request.resource.size < 10 * 1024 * 1024
+        && (request.resource.contentType.matches('image/.*')
+          || request.resource.contentType == 'application/pdf');
+      allow delete: if signedIn() && (request.auth.uid == userId || isAdmin());
     }
 
     match /tutorials/{userId}/{allFiles=**} {
       allow read: if signedIn();
-      allow write: if signedIn() && request.auth.uid == userId
+      allow create, update: if signedIn()
+        && request.auth.token.email_verified == true
+        && request.auth.uid == userId
         && request.resource.size < 100 * 1024 * 1024
         && request.resource.contentType.matches('video/.*');
+      allow delete: if signedIn() && (isAdmin() || request.auth.uid == userId);
     }
   }
 }
