@@ -30,7 +30,7 @@ public class AdminActivity extends BaseScreenActivity {
         setupScreen("Admin control", "Vendor approval and community moderation", true);
         firebase.loadCurrentUser(user -> {
             admin = user;
-            if (user == null || !("admin".equals(user.role) || firebase.isAdminEmail(user.email))) {
+            if (user == null || !"admin".equals(user.role)) {
                 content.addView(Ui.body(this, "This screen is restricted to the FoodMoboChain administrator."));
                 return;
             }
@@ -98,11 +98,17 @@ public class AdminActivity extends BaseScreenActivity {
     }
 
     private void setVendorStatus(AppUser user, String status) {
-        Map<String, Object> update = new HashMap<>();
-        update.put("users/" + user.uid + "/status", status);
-        update.put("vendorApplications/" + user.uid + "/status", status);
-        firebase.root.updateChildren(update).addOnCompleteListener(task ->
-                Ui.toast(this, task.isSuccessful() ? "Vendor status updated." : "Could not update vendor status."));
+        Map<String, Object> request = new HashMap<>();
+        request.put("uid", user.uid);
+        request.put("status", status);
+        firebase.functions.getHttpsCallable("approveVendor").call(request)
+                .addOnCompleteListener(task -> Ui.toast(this, task.isSuccessful()
+                        ? "Vendor status and permissions updated."
+                        : "Could not update vendor: " + safeMessage(task.getException())));
+    }
+
+    private String safeMessage(Exception exception) {
+        return exception == null ? "Unknown server error." : exception.getLocalizedMessage();
     }
 
     private void listenFlags() {
@@ -155,12 +161,18 @@ public class AdminActivity extends BaseScreenActivity {
     private void seedData() {
         if (admin == null) return;
         Map<String, Object> update = new HashMap<>();
-        addFood(update, "sample-kacchi", "Kacchi Biryani", "Rice", "Fragrant basmati rice, tender mutton, potato and house spices.", 320, 4.9);
-        addFood(update, "sample-borhani", "Borhani", "Drinks", "Chilled spiced yoghurt drink with mint and roasted cumin.", 80, 4.5);
-        addFood(update, "sample-grilled-chicken", "Grilled Chicken", "Grill", "Herb-grilled chicken served with fresh seasonal vegetables.", 280, 4.7);
-        addCart(update, "cart-dhanmondi", "Green Starter Cart", "Dhanmondi", 650, "Compact hygienic cart with prep shelf, canopy and storage.");
-        addCart(update, "cart-mirpur", "Street Pro Cart", "Mirpur", 850, "Larger service counter with lighting and lockable storage.");
-        addCart(update, "cart-bashundhara", "Campus Quick Cart", "Bashundhara", 550, "Lightweight cart designed for student and campus locations.");
+        addFood(update, "sample-kacchi", "Kacchi Biryani", "Rice",
+                "Fragrant basmati rice, tender mutton, potato and house spices.", 320, 4.9);
+        addFood(update, "sample-borhani", "Borhani", "Drinks",
+                "Chilled spiced yoghurt drink with mint and roasted cumin.", 80, 4.5);
+        addFood(update, "sample-grilled-chicken", "Grilled Chicken", "Grill",
+                "Herb-grilled chicken served with fresh seasonal vegetables.", 280, 4.7);
+        addCart(update, "cart-dhanmondi", "Green Starter Cart", "Dhanmondi", 650,
+                "Compact hygienic cart with prep shelf, canopy and storage.");
+        addCart(update, "cart-mirpur", "Street Pro Cart", "Mirpur", 850,
+                "Larger service counter with lighting and lockable storage.");
+        addCart(update, "cart-bashundhara", "Campus Quick Cart", "Bashundhara", 550,
+                "Lightweight cart designed for student and campus locations.");
         NewsPost post = new NewsPost();
         post.id = "welcome-post";
         post.authorId = admin.uid;
@@ -169,18 +181,35 @@ public class AdminActivity extends BaseScreenActivity {
         post.content = "Welcome to FoodMoboChain. Keep food safe, prices transparent and every customer respected.";
         post.createdAt = System.currentTimeMillis();
         update.put("newsfeed/welcome-post", post);
-        firebase.root.updateChildren(update).addOnCompleteListener(task -> Ui.toast(this, task.isSuccessful() ? "Starter content is ready." : "Could not create starter content."));
+        firebase.root.updateChildren(update).addOnCompleteListener(task ->
+                Ui.toast(this, task.isSuccessful() ? "Starter content is ready." : "Could not create starter content."));
     }
 
-    private void addFood(Map<String, Object> update, String id, String name, String category, String description, double price, double rating) {
+    private void addFood(Map<String, Object> update, String id, String name, String category,
+                         String description, double price, double rating) {
         FoodItem item = new FoodItem();
-        item.id = id; item.vendorId = admin.uid; item.vendorName = "FoodMoboChain Kitchen"; item.name = name; item.category = category; item.description = description; item.price = price; item.rating = rating; item.available = true; item.createdAt = System.currentTimeMillis();
+        item.id = id;
+        item.vendorId = admin.uid;
+        item.vendorName = "FoodMoboChain Kitchen";
+        item.name = name;
+        item.category = category;
+        item.description = description;
+        item.price = price;
+        item.rating = rating;
+        item.available = true;
+        item.createdAt = System.currentTimeMillis();
         update.put("foods/" + id, item);
     }
 
-    private void addCart(Map<String, Object> update, String id, String name, String location, double dailyRate, String description) {
+    private void addCart(Map<String, Object> update, String id, String name, String location,
+                         double dailyRate, String description) {
         RentalCart cart = new RentalCart();
-        cart.id = id; cart.name = name; cart.location = location; cart.dailyRate = dailyRate; cart.description = description; cart.available = true;
+        cart.id = id;
+        cart.name = name;
+        cart.location = location;
+        cart.dailyRate = dailyRate;
+        cart.description = description;
+        cart.available = true;
         update.put("rentalCarts/" + id, cart);
     }
 }

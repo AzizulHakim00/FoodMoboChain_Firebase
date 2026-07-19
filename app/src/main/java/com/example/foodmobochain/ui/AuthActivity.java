@@ -151,25 +151,21 @@ public class AuthActivity extends AppCompatActivity {
                             Ui.toast(this, "Verify your email first. A new verification email was sent.");
                             return;
                         }
-                        syncAdminAndOpen(refreshed);
+                        syncServerClaimsAndOpen(refreshed);
                     });
                 });
     }
 
-    private void syncAdminAndOpen(FirebaseUser user) {
-        if (!firebase.isAdminEmail(user.getEmail())) {
-            openDashboard();
-            return;
-        }
-        Map<String, Object> update = new HashMap<>();
-        update.put("uid", user.getUid());
-        update.put("email", user.getEmail());
-        update.put("name", user.getDisplayName() == null ? "FoodMoboChain Admin" : user.getDisplayName());
-        update.put("role", "admin");
-        update.put("status", "active");
-        update.put("createdAt", System.currentTimeMillis());
-        firebase.users().child(user.getUid()).updateChildren(update)
-                .addOnCompleteListener(task -> openDashboard());
+    private void syncServerClaimsAndOpen(FirebaseUser user) {
+        Map<String, Object> request = new HashMap<>();
+        firebase.functions.getHttpsCallable("bootstrapAdmin").call(request)
+                .addOnCompleteListener(roleTask -> user.getIdToken(true)
+                        .addOnCompleteListener(tokenTask -> {
+                            if (!roleTask.isSuccessful()) {
+                                Ui.toast(this, "Signed in, but secure role sync is not deployed yet.");
+                            }
+                            openDashboard();
+                        }));
     }
 
     private void resetPassword() {

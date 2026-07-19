@@ -1,0 +1,22 @@
+{
+  "name": "foodmobochain-functions",
+  "private": true,
+  "main": "index.js",
+  "engines": {
+    "node": "20"
+  },
+  "scripts": {
+    "lint": "node --check index.js && node --check lib/domain.js",
+    "test": "node --test test/domain.test.js",
+    "test:rules": "node --test test/rules.test.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.4.0",
+    "firebase-functions": "^6.4.0"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^4.0.1",
+    "firebase": "^11.10.0",
+    "firebase-tools": "^14.8.0"
+  }
+}

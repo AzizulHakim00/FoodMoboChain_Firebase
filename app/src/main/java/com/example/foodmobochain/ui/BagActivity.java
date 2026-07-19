@@ -8,9 +8,7 @@ import android.widget.LinearLayout;
 
 import androidx.annotation.NonNull;
 
-import com.example.foodmobochain.model.AppUser;
 import com.example.foodmobochain.model.CartLine;
-import com.example.foodmobochain.model.FoodOrder;
 import com.example.foodmobochain.util.Ui;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.firebase.database.DataSnapshot;
@@ -23,14 +21,13 @@ import java.util.Map;
 
 public class BagActivity extends BaseScreenActivity {
     private final Map<String, CartLine> lines = new LinkedHashMap<>();
-    private AppUser currentUser;
     private double total;
+    private boolean checkoutInProgress;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setupScreen("Your bag", "Check quantities before placing the order", true);
-        firebase.loadCurrentUser(user -> currentUser = user);
         listenToBag();
     }
 
@@ -45,7 +42,7 @@ public class BagActivity extends BaseScreenActivity {
                     CartLine line = child.getValue(CartLine.class);
                     if (line != null && line.quantity > 0) lines.put(child.getKey(), line);
                 }
-                render();
+                if (!checkoutInProgress) render();
             }
 
             @Override
@@ -87,10 +84,11 @@ public class BagActivity extends BaseScreenActivity {
         }
 
         LinearLayout totalCard = Ui.softCard(this);
-        totalCard.addView(Ui.label(this, "ORDER TOTAL"));
+        totalCard.addView(Ui.label(this, "ESTIMATED TOTAL"));
         totalCard.addView(Ui.heading(this, Ui.money(total)));
-        totalCard.addView(Ui.body(this, "Payment is recorded as cash on delivery in this academic version."));
-        Button checkout = Ui.button(this, "Place order");
+        totalCard.addView(Ui.body(this,
+                "The secure server checks current menu prices and creates a separate order for each vendor."));
+        Button checkout = Ui.button(this, "Place secure order");
         checkout.setOnClickListener(v -> askForAddress());
         totalCard.addView(checkout);
         content.addView(totalCard);
@@ -98,7 +96,7 @@ public class BagActivity extends BaseScreenActivity {
 
     private void updateQuantity(String foodId, int quantity) {
         String uid = firebase.uid();
-        if (uid == null) return;
+        if (uid == null || checkoutInProgress) return;
         if (quantity <= 0) {
             firebase.carts().child(uid).child(foodId).removeValue();
         } else {
@@ -117,8 +115,8 @@ public class BagActivity extends BaseScreenActivity {
                 .setNegativeButton("Cancel", null)
                 .setPositiveButton("Place order", (dialog, which) -> {
                     String value = address.getText().toString().trim();
-                    if (TextUtils.isEmpty(value)) {
-                        Ui.toast(this, "A delivery address is required.");
+                    if (TextUtils.isEmpty(value) || value.length() < 5) {
+                        Ui.toast(this, "A valid delivery address is required.");
                     } else {
                         createOrder(value);
                     }
@@ -126,34 +124,32 @@ public class BagActivity extends BaseScreenActivity {
     }
 
     private void createOrder(String address) {
-        String uid = firebase.uid();
-        if (uid == null || lines.isEmpty()) return;
-        String orderId = firebase.orders().push().getKey();
-        if (orderId == null) return;
-        FoodOrder order = new FoodOrder();
-        order.id = orderId;
-        order.buyerId = uid;
-        order.buyerName = currentUser == null ? "Buyer" : currentUser.name;
-        order.address = address;
-        order.status = "placed";
-        order.total = total;
-        order.createdAt = System.currentTimeMillis();
-        order.items.putAll(lines);
+        if (firebase.uid() == null || lines.isEmpty() || checkoutInProgress) return;
+        checkoutInProgress = true;
+        Map<String, Object> request = new HashMap<>();
+        request.put("address", address);
+        firebase.functions.getHttpsCallable("placeOrder").call(request)
+                .addOnCompleteListener(task -> {
+                    checkoutInProgress = false;
+                    if (!task.isSuccessful()) {
+                        Ui.toast(this, "Could not place the order: " + safeMessage(task.getException()));
+                        render();
+                        return;
+                    }
+                    int count = 1;
+                    Object data = task.getResult() == null ? null : task.getResult().getData();
+                    if (data instanceof Map) {
+                        Object value = ((Map<?, ?>) data).get("orderCount");
+                        if (value instanceof Number) count = ((Number) value).intValue();
+                    }
+                    Ui.toast(this, count == 1
+                            ? "Order placed securely."
+                            : count + " vendor orders placed securely.");
+                    open(OrdersActivity.class);
+                });
+    }
 
-        Map<String, Object> updates = new HashMap<>();
-        updates.put("orders/" + orderId, order);
-        updates.put("userOrders/" + uid + "/" + orderId, order);
-        for (CartLine line : lines.values()) {
-            if (line.vendorId != null) {
-                updates.put("vendorOrders/" + line.vendorId + "/" + orderId, order);
-            }
-        }
-        updates.put("carts/" + uid, null);
-        firebase.root.updateChildren(updates).addOnCompleteListener(task -> {
-            Ui.toast(this, task.isSuccessful()
-                    ? "Order placed successfully."
-                    : "Could not place the order: " + task.getException());
-            if (task.isSuccessful()) open(OrdersActivity.class);
-        });
+    private String safeMessage(Exception exception) {
+        return exception == null ? "Unknown server error." : exception.getLocalizedMessage();
     }
 }

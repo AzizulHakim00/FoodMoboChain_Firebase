@@ -1,45 +1,82 @@
-# Firebase setup for `mdomor01815@gmail.com`
+# Firebase production setup
 
-Firebase connects an Android app to a **Firebase project**, not directly to an email address. The email is the owner/admin account used to create and manage that project.
+FoodMoboChain connects to the Firebase project identified by `app/google-services.json`. The current configuration targets `foodmobochaindb` and the Android package `com.example.foodmobochain`.
 
-## 1. Create or select the project
+## 1. Required Firebase products
 
-1. Sign in to the Firebase Console with `mdomor01815@gmail.com`.
-2. Create a project, or open the intended FoodMoboChain project.
-3. Add an Android application with this exact package name:
+Enable these products in the Firebase Console:
 
-   `com.example.foodmobochain`
+1. Authentication → Email/Password
+2. Realtime Database
+3. Cloud Storage
+4. Cloud Functions
+5. App Check
 
-4. Download the new `google-services.json`.
-5. Replace `app/google-services.json` in this project with the downloaded file.
+Cloud Functions deployment requires a Firebase project on the Blaze plan.
 
-The included configuration currently names the project `foodmobochaindb`. A `google-services.json` file does not contain the owner's email, so confirm that `foodmobochaindb` is visible while signed in as `mdomor01815@gmail.com`. If it is not visible, replace the file using the steps above.
+## 2. Install the Firebase CLI
 
-## 2. Enable Firebase products
+```bash
+npm install -g firebase-tools
+firebase login
+firebase use foodmobochaindb
+```
 
-In the Firebase Console:
+Run the following commands from the project root.
 
-1. Authentication → Sign-in method → enable **Email/Password**.
-2. Realtime Database → create a database in the region you prefer.
-3. Storage → create the default bucket.
-4. Realtime Database → Rules → paste `firebase-database-rules.json` and publish.
-5. Storage → Rules → paste `firebase-storage-rules.txt` and publish.
+## 3. Install and test the trusted backend
 
-## 3. Create the administrator
+```bash
+npm install --prefix functions --no-audit --no-fund
+npm test --prefix functions
+```
 
-1. Run the app and create an account with `mdomor01815@gmail.com`.
-2. Open the verification email and verify the address.
-3. Sign in again. The app assigns this verified address the `admin` role.
-4. Open **Admin control** and tap **Create starter food and rental data**.
+The backend performs trusted checkout, vendor-specific order creation, controlled order status transitions, vendor approval, review creation and rating aggregation.
 
-Any other address can register as Buyer, Vendor, or Student. Vendors remain pending until this admin approves them.
+## 4. Configure the administrator
 
-## 4. Run in Android Studio
+The administrator email is no longer hardcoded in the Android application or Security Rules. Configure it as a server-side Functions parameter during deployment:
 
-1. Open the folder that contains `settings.gradle.kts` (the `FoodMoboChain` folder).
+```bash
+firebase deploy --only functions
+```
+
+When prompted for `ADMIN_EMAIL`, enter the verified administrator address. After deployment, sign out and sign in again with that address. The `bootstrapAdmin` callable function assigns the secure custom claim.
+
+## 5. Safe deployment order
+
+Deploy in this order so the Android client is never left without its trusted backend:
+
+```bash
+firebase deploy --only functions
+firebase deploy --only database,storage
+```
+
+Then install a build from the `agent/v1.1-security-foundation` branch or merge the pull request and publish the next APK.
+
+## 6. App Check
+
+1. Firebase Console → App Check → register the Android app.
+2. Select Play Integrity for production.
+3. For debug builds, run the app once and copy the App Check debug token from Logcat.
+4. Add that token in Firebase Console → App Check → Apps → Manage debug tokens.
+5. Test Authentication, Database, Storage and Functions before enabling enforcement.
+6. Enable enforcement gradually after the debug and production builds are confirmed.
+
+## 7. Create accounts and roles
+
+- Buyer and Student accounts become active after registration and email verification.
+- Vendor accounts remain pending.
+- An administrator approves or rejects vendors through the Admin screen.
+- Approval is handled by Cloud Functions and assigns the vendor custom claim.
+- Vendors should sign out and sign in again after approval to refresh their ID token.
+
+## 8. Run in Android Studio
+
+1. Open the folder containing `settings.gradle.kts`.
 2. Use Android Studio's bundled JDK 17.
-3. Install Android SDK 36 if Android Studio asks for it.
-4. Allow Gradle Sync to complete.
-5. Run the `app` configuration on an emulator or Android device with API 24 or newer.
+3. Install Android SDK 36 when prompted.
+4. Sync Gradle.
+5. Run on API 24 or newer.
 
-Do not upload `local.properties`; Android Studio creates it automatically for each computer.
+Do not commit `local.properties`, service-account JSON files, upload keystores or signing passwords.

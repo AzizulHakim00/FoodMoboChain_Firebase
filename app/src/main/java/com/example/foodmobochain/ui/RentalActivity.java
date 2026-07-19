@@ -15,8 +15,6 @@ import com.example.foodmobochain.util.Ui;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
-import com.google.firebase.database.MutableData;
-import com.google.firebase.database.Transaction;
 import com.google.firebase.database.ValueEventListener;
 
 import java.text.ParseException;
@@ -37,7 +35,7 @@ public class RentalActivity extends BaseScreenActivity {
         LinearLayout note = Ui.softCard(this);
         note.addView(Ui.label(this, "REAL-TIME AVAILABILITY"));
         note.addView(Ui.heading(this, "Start small. Sell smart."));
-        note.addView(Ui.body(this, "A transaction lock prevents two users from booking the same cart for an overlapping active period."));
+        note.addView(Ui.body(this, "A server-side transaction prevents two users from booking the same cart for overlapping dates."));
         content.addView(note);
         content.addView(Ui.heading(this, "Available carts"));
         cartList = new LinearLayout(this);
@@ -134,50 +132,22 @@ public class RentalActivity extends BaseScreenActivity {
             Ui.toast(this, "Rental duration must be between 1 and 90 days.");
             return;
         }
-        long endAt = startAt + days * 86_400_000L;
         String uid = firebase.uid();
-        String bookingId = firebase.rentalBookings().push().getKey();
-        if (uid == null || bookingId == null || cart.id == null) return;
+        if (uid == null || cart.id == null) return;
+        Map<String, Object> request = new HashMap<>();
+        request.put("cartId", cart.id);
+        request.put("location", location);
+        request.put("startAt", startAt);
+        request.put("days", days);
+        request.put("delivery", delivery);
+        firebase.functions.getHttpsCallable("bookRental").call(request)
+                .addOnCompleteListener(task -> Ui.toast(this, task.isSuccessful()
+                        ? "Rental request submitted securely."
+                        : "The booking could not be saved: " + safeMessage(task.getException())));
+    }
 
-        firebase.root.child("rentalLocks").child(cart.id).runTransaction(new Transaction.Handler() {
-            @NonNull
-            @Override
-            public Transaction.Result doTransaction(@NonNull MutableData currentData) {
-                Long reservedUntil = currentData.child("reservedUntil").getValue(Long.class);
-                if (reservedUntil != null && startAt < reservedUntil) return Transaction.abort();
-                currentData.child("bookingId").setValue(bookingId);
-                currentData.child("userId").setValue(uid);
-                currentData.child("reservedUntil").setValue(endAt);
-                return Transaction.success(currentData);
-            }
-
-            @Override
-            public void onComplete(DatabaseError error, boolean committed, DataSnapshot snapshot) {
-                if (!committed) {
-                    Ui.toast(RentalActivity.this, "That cart is already reserved for the selected period.");
-                    return;
-                }
-                RentalBooking booking = new RentalBooking();
-                booking.id = bookingId;
-                booking.cartId = cart.id;
-                booking.cartName = cart.name;
-                booking.userId = uid;
-                booking.requestedLocation = location;
-                booking.status = "requested";
-                booking.startAt = startAt;
-                booking.endAt = endAt;
-                booking.days = days;
-                booking.delivery = delivery;
-                booking.total = cart.dailyRate * days + (delivery ? 300 : 0);
-                booking.createdAt = System.currentTimeMillis();
-                Map<String, Object> updates = new HashMap<>();
-                updates.put("rentalBookings/" + bookingId, booking);
-                updates.put("userRentalBookings/" + uid + "/" + bookingId, booking);
-                firebase.root.updateChildren(updates).addOnCompleteListener(task ->
-                        Ui.toast(RentalActivity.this, task.isSuccessful()
-                                ? "Rental request submitted." : "The booking could not be saved."));
-            }
-        });
+    private String safeMessage(Exception exception) {
+        return exception == null ? "Unknown server error." : exception.getLocalizedMessage();
     }
 
     private void listenToBookings() {
