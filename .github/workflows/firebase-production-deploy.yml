@@ -32,12 +32,12 @@ jobs:
             cat > /tmp/firebase-credential-required.md <<'EOF'
           The production deployment workflow is ready, but GitHub does not have the Firebase service-account credential.
 
-          Add a repository secret named `FIREBASE_SERVICE_ACCOUNT_JSON` containing the complete JSON key for a Google Cloud service account that can deploy Cloud Functions, Realtime Database rules and Storage rules to project `foodmobochaindb`.
+          Add a repository secret named `FIREBASE_SERVICE_ACCOUNT_JSON` containing the complete JSON key for a Google Cloud service account that can deploy Cloud Functions, Realtime Database rules and Storage rules to project `foodmobochaindb-c36f5`.
 
           Recommended minimum setup:
 
           1. Google Cloud Console → IAM & Admin → Service Accounts.
-          2. Create or select a deployment service account in `foodmobochaindb`.
+          2. Create or select a deployment service account in `foodmobochaindb-c36f5`.
           3. Grant the permissions required by Firebase CLI for Functions, Database and Storage deployment.
           4. Create a JSON key.
           5. GitHub repository → Settings → Secrets and variables → Actions → New repository secret.
