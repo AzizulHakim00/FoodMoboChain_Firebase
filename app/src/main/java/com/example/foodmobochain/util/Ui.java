@@ -92,7 +92,7 @@ public final class Ui {
     private static Button button(Context context, String text, boolean primary) {
         Button button = new Button(context);
         button.setText(text);
-        button.setTextAllCaps(false);
+        button.setAllCaps(false);
         button.setTextSize(14);
         button.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
         button.setTextColor(ContextCompat.getColor(context,
