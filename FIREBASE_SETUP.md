@@ -31,7 +31,7 @@ npm install --prefix functions --no-audit --no-fund
 npm test --prefix functions
 ```
 
-The backend performs trusted checkout, vendor-specific order creation, controlled order status transitions, vendor approval, review creation and rating aggregation.
+The backend performs trusted checkout, vendor-specific order creation, controlled order status transitions, rental reservations, vendor approval, review creation and rating aggregation.
 
 ## 4. Configure the administrator
 
@@ -52,7 +52,7 @@ firebase deploy --only functions
 firebase deploy --only database,storage
 ```
 
-Then install a build from the `agent/v1.1-security-foundation` branch or merge the pull request and publish the next APK.
+Complete the verification checklist in GitHub issue #3. Only after the backend and rules are confirmed should the **Build and publish Android APK** workflow be run manually to create the `v1.1.0` prerelease.
 
 ## 6. App Check
 

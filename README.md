@@ -1,8 +1,8 @@
 # FoodMoboChain Android App
 
-> v1.1 security foundation is under review on `agent/v1.1-security-foundation`.
+> The v1.1 security foundation is merged into `main`. Production Firebase deployment is tracked in issue #3; the public v1.0 APK remains active until that checklist is complete.
 
-FoodMoboChain is a Java/XML Android application based on the supplied SRS and the green/cream Food Mobo Chain design screens. It uses Firebase Authentication, Realtime Database, and Storage.
+FoodMoboChain is a Java/XML Android application based on the supplied SRS and the green/cream Food Mobo Chain design screens. It uses Firebase Authentication, Realtime Database, Storage, Cloud Functions and App Check.
 
 ## Implemented roles
 
@@ -26,7 +26,7 @@ FoodMoboChain is a Java/XML Android application based on the supplied SRS and th
 
 ## Security architecture
 
-The Android app is treated as an untrusted client. Cloud Functions handle checkout, vendor approval, status transitions, reviews and rating totals. Realtime Database and Storage rules deny direct client writes to protected records. Firebase App Check is initialized with the debug provider for debug builds and Play Integrity for release builds.
+The Android app is treated as an untrusted client. Cloud Functions handle checkout, rental reservations, vendor approval, status transitions, reviews and rating totals. Realtime Database and Storage rules deny direct client writes to protected records. Firebase App Check is initialized with the debug provider for debug builds and Play Integrity for release builds.
 
 ## Important setup
 
@@ -36,14 +36,14 @@ Read `FIREBASE_SETUP.md` before running or deploying. Deploy Functions before th
 
 Orders use cash on delivery. No real payment gateway or card data is collected. Firebase provides authenticated access controls plus encryption in transit and at rest; the project does not claim application-layer end-to-end encryption for payments.
 
-
 ## Download the Android app
 
-The current public developer-preview APK remains available from the `v1.0.0` GitHub prerelease. After this security pull request is deployed and merged, the next release should be published as `v1.1.0`.
+The current public developer-preview APK remains available from the `v1.0.0` GitHub prerelease. After the production Firebase checklist in issue #3 is completed, manually run the **Build and publish Android APK** workflow to publish `v1.1.0`.
 
 - Current release: `https://github.com/AzizulHakim00/FoodMoboChain_Firebase/releases/tag/v1.0.0`
 - Current APK: `FoodMoboChain-v1.0.0-debug.apk`
+- Planned security preview: `FoodMoboChain-v1.1.0-debug.apk`
 
 ## Automated validation
 
-Pull requests and security branches run backend unit tests, Firebase Realtime Database Rules tests in the Emulator Suite, Android unit tests and a debug APK build.
+Pull requests and security branches run backend unit tests, Firebase Realtime Database Rules tests in the Emulator Suite, Android unit tests and a debug APK build. The v1.1 merge passed all of these checks.

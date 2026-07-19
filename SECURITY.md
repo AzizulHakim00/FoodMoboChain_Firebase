@@ -13,6 +13,7 @@ FoodMoboChain treats the Android application as an untrusted client. These opera
 - official-price checkout
 - order creation and vendor splitting
 - order status transitions
+- official-price rental booking and overlap-safe reservations
 - review creation
 - rating aggregation
 
