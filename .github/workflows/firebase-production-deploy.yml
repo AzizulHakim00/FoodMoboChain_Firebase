@@ -1,0 +1,162 @@
+name: Deploy Firebase production and publish v1.1
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/firebase-production-deploy.yml"
+
+permissions:
+  contents: write
+  issues: write
+
+env:
+  FIREBASE_PROJECT_ID: foodmobochaindb
+  ADMIN_EMAIL: mdomor01815@gmail.com
+
+jobs:
+  deploy-and-publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Verify Firebase deployment credential
+        env:
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -z "$FIREBASE_SERVICE_ACCOUNT_JSON" ]; then
+            cat > /tmp/firebase-credential-required.md <<'EOF'
+          The production deployment workflow is ready, but GitHub does not have the Firebase service-account credential.
+
+          Add a repository secret named `FIREBASE_SERVICE_ACCOUNT_JSON` containing the complete JSON key for a Google Cloud service account that can deploy Cloud Functions, Realtime Database rules and Storage rules to project `foodmobochaindb`.
+
+          Recommended minimum setup:
+
+          1. Google Cloud Console → IAM & Admin → Service Accounts.
+          2. Create or select a deployment service account in `foodmobochaindb`.
+          3. Grant the permissions required by Firebase CLI for Functions, Database and Storage deployment.
+          4. Create a JSON key.
+          5. GitHub repository → Settings → Secrets and variables → Actions → New repository secret.
+          6. Name it `FIREBASE_SERVICE_ACCOUNT_JSON` and paste the complete JSON file contents.
+          7. Re-run **Deploy Firebase production and publish v1.1** from the Actions tab.
+
+          Never commit the JSON key to the repository.
+          EOF
+            existing="$(gh issue list --state open --search 'Firebase deployment credential required in:title' --json number --jq '.[0].number // empty')"
+            if [ -z "$existing" ]; then
+              gh issue create \
+                --title "Firebase deployment credential required" \
+                --body-file /tmp/firebase-credential-required.md
+            fi
+            echo "Missing FIREBASE_SERVICE_ACCOUNT_JSON repository secret."
+            exit 1
+          fi
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT_JSON" > "$RUNNER_TEMP/firebase-service-account.json"
+          chmod 600 "$RUNNER_TEMP/firebase-service-account.json"
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Firebase backend dependencies
+        run: npm install --prefix functions --no-audit --no-fund
+
+      - name: Validate backend code
+        run: |
+          npm --prefix functions run lint
+          npm --prefix functions test
+          ./functions/node_modules/.bin/firebase emulators:exec \
+            --only database \
+            "npm --prefix functions run test:rules" \
+            --project demo-foodmobo
+
+      - name: Configure production Functions parameters
+        run: |
+          printf 'ADMIN_EMAIL=%s\n' "$ADMIN_EMAIL" > "functions/.env.${FIREBASE_PROJECT_ID}"
+
+      - name: Deploy Functions and Firebase rules
+        id: firebase_deploy
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-service-account.json
+        run: |
+          set -o pipefail
+          ./functions/node_modules/.bin/firebase deploy \
+            --only functions,database,storage \
+            --project "$FIREBASE_PROJECT_ID" \
+            --non-interactive 2>&1 | tee firebase-deploy.log
+
+      - name: Report Firebase deployment failure
+        if: failure() && steps.firebase_deploy.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo "Firebase production deployment failed for commit \`${GITHUB_SHA}\`."
+            echo
+            echo "Common causes are missing IAM roles, Cloud Functions APIs not enabled, or the Firebase project not being on the Blaze plan."
+            echo
+            echo '```text'
+            tail -n 220 firebase-deploy.log 2>/dev/null || true
+            echo '```'
+          } > /tmp/firebase-deploy-failure.md
+          gh issue create \
+            --title "Firebase production deployment failed: ${GITHUB_SHA::7}" \
+            --body-file /tmp/firebase-deploy-failure.md || true
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK 36
+        run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
+
+      - name: Configure Gradle cache
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build and test Android app
+        run: |
+          chmod +x gradlew
+          ./gradlew testDebugUnitTest assembleDebug --stacktrace
+
+      - name: Prepare v1.1 APK
+        run: cp app/build/outputs/apk/debug/app-debug.apk FoodMoboChain-v1.1.0-debug.apk
+
+      - name: Upload APK workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: FoodMoboChain-v1.1.0-debug-apk
+          path: FoodMoboChain-v1.1.0-debug.apk
+          if-no-files-found: error
+
+      - name: Publish GitHub v1.1 prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view v1.1.0 >/dev/null 2>&1; then
+            gh release upload v1.1.0 FoodMoboChain-v1.1.0-debug.apk --clobber
+          else
+            gh release create v1.1.0 FoodMoboChain-v1.1.0-debug.apk \
+              --target "$GITHUB_SHA" \
+              --title "FoodMoboChain v1.1.0 Security Preview" \
+              --notes "Firebase production backend and hardened rules deployed before publication. This debug-signed APK is intended for testing, demonstration and academic review." \
+              --prerelease
+          fi
+
+      - name: Close production deployment checklist
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh issue view 3 >/dev/null 2>&1; then
+            gh issue comment 3 --body "Production Firebase deployment succeeded and prerelease \`v1.1.0\` was published by workflow run ${GITHUB_RUN_ID}."
+            gh issue close 3 --reason completed
+          fi
