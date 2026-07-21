@@ -43,31 +43,30 @@ public class FoodCatalogActivity extends BaseScreenActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setupScreen("Discover food", "Local favourites, delivered from trusted carts", true);
+        setupScreen("Discover food", "Search the complete multi-store marketplace", true);
         buildFilters();
         listenForFoods();
     }
 
     private void buildFilters() {
         LinearLayout promotion = Ui.softCard(this);
-        promotion.addView(Ui.label(this, "FOODMOBILE MARKETPLACE"));
-        promotion.addView(Ui.heading(this, "What are you craving today?"));
+        promotion.addView(Ui.label(this, "LARGE FOOD CATALOGUE"));
+        promotion.addView(Ui.heading(this, "Search dozens of foods across verified stores."));
         promotion.addView(Ui.body(this,
-                "Search popular Bangladeshi street food, meals, drinks and desserts from verified local sellers."));
+                "Filter by category, rating, price or preparation time. Search also matches store names, descriptions and food tags."));
         content.addView(promotion);
 
         LinearLayout filters = Ui.card(this);
-        search = Ui.input(this, "Search biryani, fuchka, momo, burger…");
+        search = Ui.input(this, "Search biryani, fuchka, pizza, healthy bowl…");
         filters.addView(search);
-
-        category = marketplaceSpinner(Arrays.asList("All", "Rice", "Traditional", "Street Food",
-                "Fast Food", "Snacks", "Noodles", "Grill", "Drinks", "Dessert"));
+        category = marketplaceSpinner(Arrays.asList("All", "Biryani", "Rice Meals", "Bengali Meals",
+                "Traditional", "Street Food", "Dumplings", "Snacks", "Burgers", "Fast Food",
+                "Noodles", "Chinese", "Pizza", "Pasta", "Grill", "BBQ", "Healthy Food",
+                "Breakfast", "Dessert", "Cake", "Drinks", "Coffee", "Combo Meals"));
         filters.addView(category);
-
-        sort = marketplaceSpinner(Arrays.asList("Recommended", "Top rated", "Price: low to high",
-                "Price: high to low", "Fastest preparation"));
+        sort = marketplaceSpinner(Arrays.asList("Recommended", "Top rated", "Biggest discount",
+                "Price: low to high", "Price: high to low", "Fastest preparation"));
         filters.addView(sort);
-
         Button apply = Ui.button(this, "Show matching dishes");
         apply.setOnClickListener(v -> renderFoods());
         filters.addView(apply);
@@ -76,21 +75,23 @@ public class FoodCatalogActivity extends BaseScreenActivity {
         LinearLayout shortcuts = new LinearLayout(this);
         shortcuts.setOrientation(LinearLayout.HORIZONTAL);
         shortcuts.setGravity(Gravity.CENTER);
+        Button stores = shortcutButton("Stores");
+        stores.setOnClickListener(v -> open(StoresActivity.class));
+        Button offers = shortcutButton("Offers");
+        offers.setOnClickListener(v -> open(OffersActivity.class));
         Button bag = shortcutButton("Bag");
         bag.setOnClickListener(v -> open(BagActivity.class));
-        Button favourites = shortcutButton("Favourites");
+        Button favourites = shortcutButton("Saved");
         favourites.setOnClickListener(v -> open(FavoritesActivity.class));
-        Button orders = shortcutButton("Orders");
-        orders.setOnClickListener(v -> open(OrdersActivity.class));
+        shortcuts.addView(stores);
+        shortcuts.addView(offers);
         shortcuts.addView(bag);
         shortcuts.addView(favourites);
-        shortcuts.addView(orders);
         content.addView(shortcuts);
 
         results = new LinearLayout(this);
         results.setOrientation(LinearLayout.VERTICAL);
         content.addView(results);
-
         search.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) { renderFoods(); }
@@ -114,8 +115,9 @@ public class FoodCatalogActivity extends BaseScreenActivity {
     private Button shortcutButton(String text) {
         Button button = Ui.outlineButton(this, text);
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, Ui.dp(this, 48), 1f);
-        params.setMargins(Ui.dp(this, 3), Ui.dp(this, 8), Ui.dp(this, 3), 0);
+        params.setMargins(Ui.dp(this, 2), Ui.dp(this, 8), Ui.dp(this, 2), 0);
         button.setLayoutParams(params);
+        button.setTextSize(11);
         return button;
     }
 
@@ -148,26 +150,24 @@ public class FoodCatalogActivity extends BaseScreenActivity {
         String selected = String.valueOf(category.getSelectedItem());
         List<FoodItem> filtered = new ArrayList<>();
         for (FoodItem item : allFoods) {
-            if (!item.available) continue;
+            if (!item.inStock()) continue;
             String searchable = safe(item.name) + " " + safe(item.description) + " "
-                    + safe(item.vendorName) + " " + safe(item.category);
+                    + safe(item.vendorName) + " " + safe(item.category) + " " + safe(item.tags);
             if (!query.isEmpty() && !searchable.toLowerCase(Locale.ROOT).contains(query)) continue;
             if (!"All".equals(selected) && !selected.equalsIgnoreCase(item.category)) continue;
             filtered.add(item);
         }
         applySort(filtered, String.valueOf(sort.getSelectedItem()));
-
         LinearLayout summary = Ui.softCard(this);
         summary.addView(Ui.label(this, "AVAILABLE NOW"));
         summary.addView(Ui.title(this, filtered.size() + (filtered.size() == 1 ? " dish found" : " dishes found")));
         summary.addView(Ui.body(this, selected + "  •  " + String.valueOf(sort.getSelectedItem())));
         results.addView(summary);
-
         for (FoodItem item : filtered) results.addView(foodCard(item));
         if (filtered.isEmpty()) {
             LinearLayout empty = Ui.card(this);
             empty.addView(Ui.title(this, "No dishes found"));
-            empty.addView(Ui.body(this, "Try another category or search phrase."));
+            empty.addView(Ui.body(this, "Try another category, store name or search phrase."));
             results.addView(empty);
         }
     }
@@ -175,6 +175,8 @@ public class FoodCatalogActivity extends BaseScreenActivity {
     private void applySort(List<FoodItem> foods, String selectedSort) {
         if ("Top rated".equals(selectedSort)) {
             foods.sort(Comparator.comparingDouble((FoodItem value) -> value.rating).reversed());
+        } else if ("Biggest discount".equals(selectedSort)) {
+            foods.sort(Comparator.comparingDouble((FoodItem value) -> value.discountPercent).reversed());
         } else if ("Price: low to high".equals(selectedSort)) {
             foods.sort(Comparator.comparingDouble(value -> value.price));
         } else if ("Price: high to low".equals(selectedSort)) {
@@ -183,8 +185,7 @@ public class FoodCatalogActivity extends BaseScreenActivity {
             foods.sort(Comparator.comparingInt(value -> value.preparationMinutes > 0
                     ? value.preparationMinutes : 20));
         } else {
-            foods.sort(Comparator
-                    .comparing((FoodItem value) -> !value.featured)
+            foods.sort(Comparator.comparing((FoodItem value) -> !value.featured)
                     .thenComparing(Comparator.comparingDouble((FoodItem value) -> value.rating).reversed()));
         }
     }
@@ -193,7 +194,6 @@ public class FoodCatalogActivity extends BaseScreenActivity {
         LinearLayout card = Ui.card(this);
         card.setClickable(true);
         card.setFocusable(true);
-
         ImageView image = new ImageView(this);
         image.setContentDescription(item.name + " image");
         image.setLayoutParams(new LinearLayout.LayoutParams(
@@ -208,7 +208,10 @@ public class FoodCatalogActivity extends BaseScreenActivity {
         copy.setOrientation(LinearLayout.VERTICAL);
         copy.setLayoutParams(new LinearLayout.LayoutParams(0,
                 LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
-        copy.addView(Ui.label(this, safe(item.category).isEmpty() ? "LOCAL FOOD" : item.category));
+        String badge = safe(item.category).isEmpty() ? "LOCAL FOOD" : item.category;
+        if (item.discountPercent > 0) badge += "  •  "
+                + String.format(Locale.US, "%.0f%% OFF", item.discountPercent);
+        copy.addView(Ui.label(this, badge));
         copy.addView(Ui.title(this, safe(item.name)));
         copy.addView(Ui.body(this, safe(item.vendorName)));
         headingRow.addView(copy);
@@ -227,8 +230,11 @@ public class FoodCatalogActivity extends BaseScreenActivity {
         String detail = "★ " + String.format(Locale.US, "%.1f", item.rating > 0 ? item.rating : 4.7)
                 + "  •  " + (item.preparationMinutes > 0 ? item.preparationMinutes : 20)
                 + "–" + ((item.preparationMinutes > 0 ? item.preparationMinutes : 20) + 10) + " min"
-                + "  •  " + (item.deliveryFee <= 0 ? "Free delivery" : Ui.money(item.deliveryFee) + " delivery");
+                + "  •  " + (item.deliveryFee <= 0 ? "Free delivery" : Ui.money(item.deliveryFee) + " delivery")
+                + "  •  Stock " + item.stockCount;
         card.addView(Ui.body(this, detail));
+        if (item.listPrice() > item.price) card.addView(Ui.body(this,
+                "Regular price " + Ui.money(item.listPrice())));
         TextView price = Ui.heading(this, Ui.money(item.price));
         price.setTextColor(getColor(R.color.brand_orange));
         card.addView(price);
@@ -256,7 +262,7 @@ public class FoodCatalogActivity extends BaseScreenActivity {
 
     private void addToBag(FoodItem item, Button button) {
         String uid = firebase.uid();
-        if (uid == null || item.id == null) return;
+        if (uid == null || item.id == null || !item.inStock()) return;
         button.setEnabled(false);
         firebase.carts().child(uid).child(item.id).runTransaction(new Transaction.Handler() {
             @NonNull
@@ -265,7 +271,8 @@ public class FoodCatalogActivity extends BaseScreenActivity {
                 CartLine line = currentData.getValue(CartLine.class);
                 if (line == null) line = new CartLine(item, 0);
                 line.unitPrice = item.price;
-                line.quantity = Math.min(20, line.quantity + 1);
+                int max = item.stockCount > 0 ? Math.min(20, item.stockCount) : 20;
+                line.quantity = Math.min(max, line.quantity + 1);
                 currentData.setValue(line);
                 return Transaction.success(currentData);
             }
