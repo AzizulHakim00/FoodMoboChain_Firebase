@@ -15,13 +15,12 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.foodmobochain.R;
 import com.example.foodmobochain.data.FirebaseService;
+import com.example.foodmobochain.data.SparkOperations;
 import com.example.foodmobochain.model.AppUser;
 import com.example.foodmobochain.util.Ui;
 import com.google.firebase.auth.FirebaseUser;
 
-import java.util.HashMap;
 import java.util.Locale;
-import java.util.Map;
 
 public class AuthActivity extends AppCompatActivity {
     private final FirebaseService firebase = FirebaseService.get();
@@ -151,21 +150,18 @@ public class AuthActivity extends AppCompatActivity {
                             Ui.toast(this, "Verify your email first. A new verification email was sent.");
                             return;
                         }
-                        syncServerClaimsAndOpen(refreshed);
+                        syncSparkRoleAndOpen();
                     });
                 });
     }
 
-    private void syncServerClaimsAndOpen(FirebaseUser user) {
-        Map<String, Object> request = new HashMap<>();
-        firebase.functions.getHttpsCallable("bootstrapAdmin").call(request)
-                .addOnCompleteListener(roleTask -> user.getIdToken(true)
-                        .addOnCompleteListener(tokenTask -> {
-                            if (!roleTask.isSuccessful()) {
-                                Ui.toast(this, "Signed in, but secure role sync is not deployed yet.");
-                            }
-                            openDashboard();
-                        }));
+    private void syncSparkRoleAndOpen() {
+        SparkOperations.syncAdminProfile(firebase, (isAdmin, error) -> {
+            if (error != null) {
+                Ui.toast(this, "Signed in, but the administrator profile could not be synchronized.");
+            }
+            openDashboard();
+        });
     }
 
     private void resetPassword() {

@@ -4,64 +4,31 @@
     ".write": false,
     "users": {
       "$uid": {
-        ".read": "auth != null && (auth.uid === $uid || auth.token.admin === true)",
-        ".write": "auth != null && (auth.token.admin === true || (auth.uid === $uid && !data.exists() && newData.hasChildren(['uid','name','email','role','status','rating','createdAt']) && newData.child('uid').val() === auth.uid && newData.child('email').val() === auth.token.email && newData.child('rating').val() === 0 && (newData.child('role').val() === 'buyer' || newData.child('role').val() === 'vendor' || newData.child('role').val() === 'student') && ((newData.child('role').val() === 'vendor' && newData.child('status').val() === 'pending') || (newData.child('role').val() !== 'vendor' && newData.child('status').val() === 'active'))))",
-        "uid": {
-          ".write": "auth != null && auth.token.admin === true",
-          ".validate": "newData.isString() && (auth.token.admin === true || newData.val() === auth.uid)"
-        },
-        "email": {
-          ".write": "auth != null && auth.token.admin === true",
-          ".validate": "newData.isString() && newData.val().length <= 320 && (auth.token.admin === true || newData.val() === auth.token.email)"
-        },
-        "role": {
-          ".write": "auth != null && auth.token.admin === true",
-          ".validate": "newData.isString() && (newData.val() === 'buyer' || newData.val() === 'vendor' || newData.val() === 'student' || (auth.token.admin === true && newData.val() === 'admin'))"
-        },
-        "status": {
-          ".write": "auth != null && auth.token.admin === true",
-          ".validate": "newData.isString() && (newData.val() === 'active' || newData.val() === 'pending' || newData.val() === 'approved' || newData.val() === 'rejected')"
-        },
-        "createdAt": {
-          ".write": "auth != null && auth.token.admin === true",
-          ".validate": "newData.isNumber()"
-        },
-        "updatedAt": {
-          ".write": "auth != null && auth.token.admin === true",
-          ".validate": "!newData.exists() || newData.isNumber()"
-        },
-        "rating": {
-          ".write": "auth != null && auth.token.admin === true",
-          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 5"
-        },
-        "name": {
-          ".write": "auth != null && (auth.uid === $uid || auth.token.admin === true)",
-          ".validate": "newData.isString() && newData.val().length >= 2 && newData.val().length <= 80"
-        },
-        "phone": {
-          ".write": "auth != null && (auth.uid === $uid || auth.token.admin === true)",
-          ".validate": "!newData.exists() || (newData.isString() && newData.val().length <= 30)"
-        },
-        "businessName": {
-          ".write": "auth != null && (auth.uid === $uid || auth.token.admin === true)",
-          ".validate": "!newData.exists() || (newData.isString() && newData.val().length <= 100)"
-        },
-        "location": {
-          ".write": "auth != null && (auth.uid === $uid || auth.token.admin === true)",
-          ".validate": "!newData.exists() || (newData.isString() && newData.val().length <= 200)"
-        },
-        "documentUrl": {
-          ".write": "auth != null && (auth.uid === $uid || auth.token.admin === true)",
-          ".validate": "!newData.exists() || (newData.isString() && newData.val().length <= 2000)"
-        }
+        ".read": "auth != null && (auth.uid === $uid || (auth.token.email_verified === true && auth.token.email === 'mdomor01815@gmail.com'))",
+        ".write": "auth != null && ((auth.token.email_verified === true && auth.token.email === 'mdomor01815@gmail.com') || (auth.uid === $uid && ((!data.exists() && newData.hasChildren(['uid','name','email','role','status','rating','createdAt']) && newData.child('uid').val() === auth.uid && newData.child('email').val() === auth.token.email && newData.child('rating').val() === 0 && (newData.child('role').val() === 'buyer' || newData.child('role').val() === 'vendor' || newData.child('role').val() === 'student') && ((newData.child('role').val() === 'vendor' && newData.child('status').val() === 'pending') || (newData.child('role').val() !== 'vendor' && newData.child('status').val() === 'active'))) || (data.exists() && newData.exists() && newData.child('uid').val() === data.child('uid').val() && newData.child('email').val() === data.child('email').val() && newData.child('role').val() === data.child('role').val() && newData.child('status').val() === data.child('status').val() && newData.child('rating').val() === data.child('rating').val() && newData.child('createdAt').val() === data.child('createdAt').val()))))",
+        ".validate": "!newData.exists() || (newData.hasChildren(['uid','name','email','role','status','rating','createdAt']) && newData.child('uid').val() === $uid && newData.child('name').isString() && newData.child('name').val().length >= 2 && newData.child('name').val().length <= 80 && newData.child('email').isString() && newData.child('email').val().length <= 320 && (newData.child('role').val() === 'buyer' || newData.child('role').val() === 'vendor' || newData.child('role').val() === 'student' || newData.child('role').val() === 'admin') && (newData.child('status').val() === 'active' || newData.child('status').val() === 'pending' || newData.child('status').val() === 'approved' || newData.child('status').val() === 'rejected') && newData.child('rating').isNumber() && newData.child('rating').val() >= 0 && newData.child('rating').val() <= 5 && newData.child('createdAt').isNumber())",
+        "phone": {".validate": "!newData.exists() || (newData.isString() && newData.val().length <= 30)"},
+        "businessName": {".validate": "!newData.exists() || (newData.isString() && newData.val().length <= 100)"},
+        "location": {".validate": "!newData.exists() || (newData.isString() && newData.val().length <= 200)"},
+        "documentUrl": {".validate": "!newData.exists() || (newData.isString() && newData.val().length <= 2000)"},
+        "updatedAt": {".validate": "!newData.exists() || newData.isNumber()"}
+      }
+    },
+    "vendorApplications": {
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || (auth.token.email_verified === true && auth.token.email === 'mdomor01815@gmail.com'))",
+        ".write": "auth != null && ((auth.token.email_verified === true && auth.token.email === 'mdomor01815@gmail.com') || (!data.exists() && auth.uid === $uid && newData.child('uid').val() === auth.uid && newData.child('role').val() === 'vendor' && newData.child('status').val() === 'pending'))",
+        ".validate": "!newData.exists() || (newData.child('uid').val() === $uid && newData.child('role').val() === 'vendor' && (newData.child('status').val() === 'pending' || newData.child('status').val() === 'approved' || newData.child('status').val() === 'rejected'))"
       }
     },
     "foods": {
       ".read": "auth != null",
       ".indexOn": ["vendorId", "category", "available"],
       "$foodId": {
-        ".write": "auth != null && (auth.token.admin === true || (auth.token.vendor === true && auth.token.role === 'vendor' && ((newData.exists() && newData.child('vendorId').val() === auth.uid) || (!newData.exists() && data.child('vendorId').val() === auth.uid))))",
-        ".validate": "!newData.exists() || (newData.hasChildren(['id','vendorId','vendorName','name','category','description','price','available','createdAt']) && newData.child('id').val() === $foodId && newData.child('name').isString() && newData.child('name').val().length >= 2 && newData.child('name').val().length <= 100 && newData.child('description').isString() && newData.child('description').val().length <= 500 && newData.child('price').isNumber() && newData.child('price').val() >= 0 && newData.child('price').val() <= 100000 && newData.child('available').isBoolean())"
+        ".write": "auth != null && auth.token.email_verified === true && ((auth.token.email === 'mdomor01815@gmail.com') || (root.child('users').child(auth.uid).child('role').val() === 'vendor' && (root.child('users').child(auth.uid).child('status').val() === 'approved' || root.child('users').child(auth.uid).child('status').val() === 'active') && ((!data.exists() && newData.child('vendorId').val() === auth.uid) || (data.exists() && data.child('vendorId').val() === auth.uid && newData.child('vendorId').val() === auth.uid))))",
+        ".validate": "!newData.exists() || (newData.hasChildren(['id','vendorId','vendorName','name','category','description','price','available','createdAt']) && newData.child('id').val() === $foodId && newData.child('vendorId').isString() && newData.child('vendorName').isString() && newData.child('vendorName').val().length <= 100 && newData.child('name').isString() && newData.child('name').val().length >= 2 && newData.child('name').val().length <= 100 && newData.child('category').isString() && newData.child('category').val().length <= 80 && newData.child('description').isString() && newData.child('description').val().length <= 500 && newData.child('price').isNumber() && newData.child('price').val() >= 0 && newData.child('price').val() <= 100000 && newData.child('available').isBoolean() && newData.child('createdAt').isNumber() && (!data.exists() || (newData.child('id').val() === data.child('id').val() && newData.child('vendorId').val() === data.child('vendorId').val() && newData.child('createdAt').val() === data.child('createdAt').val())))",
+        "rating": {".validate": "!newData.exists() || (newData.isNumber() && newData.val() >= 0 && newData.val() <= 5 && ((auth.token.email_verified === true && auth.token.email === 'mdomor01815@gmail.com') || (!data.exists() && newData.val() === 0) || (data.exists() && newData.val() === data.val())))"},
+        "imageUrl": {".validate": "!newData.exists() || (newData.isString() && newData.val().length <= 2000)"}
       }
     },
     "carts": {
@@ -69,88 +36,105 @@
         ".read": "auth != null && auth.uid === $uid",
         ".write": "auth != null && auth.uid === $uid",
         "$foodId": {
-          ".validate": "!newData.exists() || (newData.hasChildren(['foodId','vendorId','vendorName','name','unitPrice','quantity']) && newData.child('foodId').val() === $foodId && newData.child('vendorId').val() === root.child('foods').child($foodId).child('vendorId').val() && newData.child('unitPrice').val() === root.child('foods').child($foodId).child('price').val() && newData.child('quantity').isNumber() && newData.child('quantity').val() >= 1 && newData.child('quantity').val() <= 20)"
+          ".validate": "!newData.exists() || (newData.hasChildren(['foodId','vendorId','vendorName','name','unitPrice','quantity']) && root.child('foods').child($foodId).exists() && root.child('foods').child($foodId).child('available').val() === true && newData.child('foodId').val() === $foodId && newData.child('vendorId').val() === root.child('foods').child($foodId).child('vendorId').val() && newData.child('vendorName').val() === root.child('foods').child($foodId).child('vendorName').val() && newData.child('name').val() === root.child('foods').child($foodId).child('name').val() && newData.child('unitPrice').val() === root.child('foods').child($foodId).child('price').val() && newData.child('quantity').isNumber() && newData.child('quantity').val() >= 1 && newData.child('quantity').val() <= 20)"
         }
       }
     },
     "orders": {
+      ".read": "auth != null && ((auth.token.email_verified === true && auth.token.email === 'mdomor01815@gmail.com') || (query.orderByChild === 'buyerId' && query.equalTo === auth.uid) || (query.orderByChild === 'vendorId' && query.equalTo === auth.uid))",
+      ".indexOn": ["buyerId", "vendorId", "createdAt"],
       "$orderId": {
-        ".read": "auth != null && (data.child('buyerId').val() === auth.uid || data.child('vendorId').val() === auth.uid || auth.token.admin === true)",
-        ".write": false
+        ".read": "auth != null && (data.child('buyerId').val() === auth.uid || data.child('vendorId').val() === auth.uid || (auth.token.email_verified === true && auth.token.email === 'mdomor01815@gmail.com'))",
+        ".write": "auth != null && auth.token.email_verified === true && ((!data.exists() && newData.exists() && newData.child('buyerId').val() === auth.uid && (root.child('users').child(auth.uid).child('status').val() === 'active' || root.child('users').child(auth.uid).child('status').val() === 'approved')) || (data.exists() && newData.exists() && ((data.child('vendorId').val() === auth.uid && root.child('users').child(auth.uid).child('role').val() === 'vendor' && (root.child('users').child(auth.uid).child('status').val() === 'approved' || root.child('users').child(auth.uid).child('status').val() === 'active')) || auth.token.email === 'mdomor01815@gmail.com'))) ",
+        ".validate": "newData.exists() && newData.hasChildren(['id','buyerId','vendorId','buyerName','address','status','createdAt','updatedAt','items']) && newData.child('id').val() === $orderId && newData.child('buyerId').isString() && newData.child('vendorId').isString() && newData.child('buyerName').isString() && newData.child('buyerName').val().length >= 2 && newData.child('buyerName').val().length <= 80 && newData.child('address').isString() && newData.child('address').val().length >= 5 && newData.child('address').val().length <= 300 && newData.child('createdAt').isNumber() && newData.child('updatedAt').isNumber() && newData.child('updatedAt').val() >= newData.child('createdAt').val() && newData.child('items').hasChildren() && ((root.child('users').child(newData.child('vendorId').val()).child('role').val() === 'vendor' && (root.child('users').child(newData.child('vendorId').val()).child('status').val() === 'approved' || root.child('users').child(newData.child('vendorId').val()).child('status').val() === 'active')) || root.child('users').child(newData.child('vendorId').val()).child('role').val() === 'admin')",
+        "id": {".validate": "!data.exists() || newData.val() === data.val()"},
+        "buyerId": {".validate": "(!data.exists() && newData.val() === auth.uid) || (data.exists() && newData.val() === data.val())"},
+        "vendorId": {".validate": "(!data.exists() && newData.isString()) || (data.exists() && newData.val() === data.val())"},
+        "buyerName": {".validate": "(!data.exists() && newData.val() === root.child('users').child(auth.uid).child('name').val()) || (data.exists() && newData.val() === data.val())"},
+        "address": {".validate": "!data.exists() || newData.val() === data.val()"},
+        "createdAt": {".validate": "(!data.exists() && newData.isNumber() && newData.val() <= now + 60000) || (data.exists() && newData.val() === data.val())"},
+        "updatedAt": {".validate": "newData.isNumber() && (!data.exists() || newData.val() >= data.val())"},
+        "status": {
+          ".validate": "newData.isString() && ((!data.exists() && newData.val() === 'placed') || (data.exists() && ((auth.token.email_verified === true && auth.token.email === 'mdomor01815@gmail.com' && (newData.val() === 'placed' || newData.val() === 'accepted' || newData.val() === 'preparing' || newData.val() === 'out_for_delivery' || newData.val() === 'delivered' || newData.val() === 'cancelled')) || (auth.uid === newData.parent().child('vendorId').val() && ((data.val() === 'placed' && newData.val() === 'accepted') || (data.val() === 'accepted' && newData.val() === 'preparing') || (data.val() === 'preparing' && newData.val() === 'out_for_delivery') || (data.val() === 'out_for_delivery' && newData.val() === 'delivered'))))))"
+        },
+        "items": {
+          "$foodId": {
+            ".validate": "newData.exists() && ((!data.exists() && newData.hasChildren(['foodId','vendorId','vendorName','name','unitPrice','quantity']) && root.child('foods').child($foodId).exists() && root.child('foods').child($foodId).child('available').val() === true && newData.child('foodId').val() === $foodId && newData.child('vendorId').val() === root.child('foods').child($foodId).child('vendorId').val() && newData.child('vendorId').val() === newData.parent().parent().child('vendorId').val() && newData.child('vendorName').val() === root.child('foods').child($foodId).child('vendorName').val() && newData.child('name').val() === root.child('foods').child($foodId).child('name').val() && newData.child('unitPrice').val() === root.child('foods').child($foodId).child('price').val() && newData.child('quantity').isNumber() && newData.child('quantity').val() >= 1 && newData.child('quantity').val() <= 20) || (data.exists() && newData.val() === data.val()))"
+          }
+        }
       }
     },
-    "userOrders": {
-      "$uid": {
-        ".read": "auth != null && (auth.uid === $uid || auth.token.admin === true)",
-        ".write": false
-      }
-    },
-    "vendorOrders": {
-      "$vendorId": {
-        ".read": "auth != null && (auth.uid === $vendorId || auth.token.admin === true)",
-        ".write": false
+    "reviews": {
+      ".read": "auth != null",
+      ".indexOn": ["targetUserId", "orderId", "authorId"],
+      "$reviewId": {
+        ".write": "auth != null && auth.token.email_verified === true && !data.exists() && newData.exists() && $reviewId === newData.child('orderId').val() + '_' + auth.uid && root.child('orders').child(newData.child('orderId').val()).child('status').val() === 'delivered' && (root.child('orders').child(newData.child('orderId').val()).child('buyerId').val() === auth.uid || root.child('orders').child(newData.child('orderId').val()).child('vendorId').val() === auth.uid)",
+        ".validate": "newData.hasChildren(['id','orderId','authorId','targetUserId','stars','comment','createdAt']) && newData.child('id').val() === $reviewId && newData.child('authorId').val() === auth.uid && ((root.child('orders').child(newData.child('orderId').val()).child('buyerId').val() === auth.uid && newData.child('targetUserId').val() === root.child('orders').child(newData.child('orderId').val()).child('vendorId').val()) || (root.child('orders').child(newData.child('orderId').val()).child('vendorId').val() === auth.uid && newData.child('targetUserId').val() === root.child('orders').child(newData.child('orderId').val()).child('buyerId').val())) && newData.child('stars').isNumber() && newData.child('stars').val() >= 1 && newData.child('stars').val() <= 5 && newData.child('comment').isString() && newData.child('comment').val().length >= 1 && newData.child('comment').val().length <= 1000 && newData.child('createdAt').isNumber() && newData.child('createdAt').val() <= now + 60000"
       }
     },
     "rentalCarts": {
       ".read": "auth != null",
-      ".write": "auth != null && auth.token.admin === true"
-    },
-    "rentalLocks": {
-      ".read": false,
-      ".write": false
-    },
-    "rentalBookings": {
-      ".indexOn": ["userId", "cartId"],
-      "$bookingId": {
-        ".read": "auth != null && (data.child('userId').val() === auth.uid || auth.token.admin === true)",
-        ".write": false
+      ".write": "auth != null && auth.token.email_verified === true && auth.token.email === 'mdomor01815@gmail.com'",
+      "$cartId": {
+        ".validate": "!newData.exists() || (newData.hasChildren(['id','name','location','description','dailyRate','available']) && newData.child('id').val() === $cartId && newData.child('name').isString() && newData.child('name').val().length >= 2 && newData.child('name').val().length <= 100 && newData.child('location').isString() && newData.child('location').val().length <= 200 && newData.child('description').isString() && newData.child('description').val().length <= 500 && newData.child('dailyRate').isNumber() && newData.child('dailyRate').val() >= 0 && newData.child('dailyRate').val() <= 100000 && newData.child('available').isBoolean())"
       }
     },
-    "userRentalBookings": {
-      "$uid": {
-        ".read": "auth != null && (auth.uid === $uid || auth.token.admin === true)",
-        ".write": false
+    "rentalBookings": {
+      ".read": "auth != null && ((auth.token.email_verified === true && auth.token.email === 'mdomor01815@gmail.com') || (query.orderByChild === 'userId' && query.equalTo === auth.uid))",
+      ".indexOn": ["userId", "cartId", "status"],
+      "$bookingId": {
+        ".read": "auth != null && (data.child('userId').val() === auth.uid || (auth.token.email_verified === true && auth.token.email === 'mdomor01815@gmail.com'))",
+        ".write": "auth != null && auth.token.email_verified === true && ((auth.token.email === 'mdomor01815@gmail.com') || (!data.exists() && newData.exists() && newData.child('userId').val() === auth.uid && newData.child('status').val() === 'holding') || (data.exists() && data.child('userId').val() === auth.uid && ((newData.exists() && data.child('status').val() === 'holding' && newData.child('status').val() === 'requested') || (!newData.exists() && data.child('status').val() === 'holding'))))",
+        ".validate": "!newData.exists() || (newData.hasChildren(['id','cartId','cartName','userId','requestedLocation','status','startAt','endAt','createdAt','updatedAt','days','delivery','dailyRate','total']) && newData.child('id').val() === $bookingId && newData.child('cartId').isString() && root.child('rentalCarts').child(newData.child('cartId').val()).exists() && root.child('rentalCarts').child(newData.child('cartId').val()).child('available').val() === true && newData.child('cartName').val() === root.child('rentalCarts').child(newData.child('cartId').val()).child('name').val() && newData.child('dailyRate').val() === root.child('rentalCarts').child(newData.child('cartId').val()).child('dailyRate').val() && newData.child('userId').isString() && newData.child('requestedLocation').isString() && newData.child('requestedLocation').val().length >= 2 && newData.child('requestedLocation').val().length <= 300 && newData.child('startAt').isNumber() && newData.child('startAt').val() >= now - 86400000 && newData.child('days').isNumber() && newData.child('days').val() >= 1 && newData.child('days').val() <= 90 && newData.child('endAt').val() === newData.child('startAt').val() + newData.child('days').val() * 86400000 && newData.child('delivery').isBoolean() && newData.child('total').isNumber() && ((newData.child('delivery').val() === false && newData.child('total').val() === newData.child('dailyRate').val() * newData.child('days').val()) || (newData.child('delivery').val() === true && newData.child('total').val() === newData.child('dailyRate').val() * newData.child('days').val() + 300)) && newData.child('createdAt').isNumber() && newData.child('updatedAt').isNumber() && newData.child('updatedAt').val() >= newData.child('createdAt').val())",
+        "id": {".validate": "!data.exists() || newData.val() === data.val()"},
+        "cartId": {".validate": "!data.exists() || newData.val() === data.val()"},
+        "cartName": {".validate": "!data.exists() || newData.val() === data.val()"},
+        "userId": {".validate": "(!data.exists() && newData.val() === auth.uid) || (data.exists() && newData.val() === data.val())"},
+        "requestedLocation": {".validate": "!data.exists() || newData.val() === data.val()"},
+        "startAt": {".validate": "!data.exists() || newData.val() === data.val()"},
+        "endAt": {".validate": "!data.exists() || newData.val() === data.val()"},
+        "createdAt": {".validate": "!data.exists() || newData.val() === data.val()"},
+        "days": {".validate": "!data.exists() || newData.val() === data.val()"},
+        "delivery": {".validate": "!data.exists() || newData.val() === data.val()"},
+        "dailyRate": {".validate": "!data.exists() || newData.val() === data.val()"},
+        "total": {".validate": "!data.exists() || newData.val() === data.val()"},
+        "updatedAt": {".validate": "newData.isNumber() && (!data.exists() || newData.val() >= data.val())"},
+        "status": {".validate": "newData.isString() && ((!data.exists() && newData.val() === 'holding') || (data.exists() && ((auth.token.email_verified === true && auth.token.email === 'mdomor01815@gmail.com' && (newData.val() === 'holding' || newData.val() === 'requested' || newData.val() === 'approved' || newData.val() === 'rejected' || newData.val() === 'completed' || newData.val() === 'cancelled')) || (auth.uid === newData.parent().child('userId').val() && data.val() === 'holding' && newData.val() === 'requested'))))"}
+      }
+    },
+    "rentalReservations": {
+      "$cartId": {
+        "$dateKey": {
+          ".read": false,
+          ".write": "auth != null && auth.token.email_verified === true && ((auth.token.email === 'mdomor01815@gmail.com') || (!data.exists() && newData.exists() && newData.child('userId').val() === auth.uid && root.child('rentalBookings').child(newData.child('bookingId').val()).child('userId').val() === auth.uid && root.child('rentalBookings').child(newData.child('bookingId').val()).child('cartId').val() === $cartId && root.child('rentalBookings').child(newData.child('bookingId').val()).child('status').val() === 'holding') || (data.exists() && !newData.exists() && data.child('userId').val() === auth.uid && root.child('rentalBookings').child(data.child('bookingId').val()).child('status').val() === 'holding'))",
+          ".validate": "!newData.exists() || (newData.hasChildren(['bookingId','userId','createdAt']) && newData.child('bookingId').isString() && newData.child('userId').val() === auth.uid && newData.child('createdAt').isNumber())"
+        }
       }
     },
     "training": {
       ".read": "auth != null",
       "$resourceId": {
-        ".write": "auth != null && auth.token.email_verified === true && (auth.token.admin === true || ((newData.exists() && newData.child('uploaderId').val() === auth.uid) || (!newData.exists() && data.child('uploaderId').val() === auth.uid)))",
-        ".validate": "!newData.exists() || (newData.child('title').isString() && newData.child('title').val().length >= 3 && newData.child('title').val().length <= 150 && newData.child('videoUrl').isString())"
+        ".write": "auth != null && auth.token.email_verified === true && ((auth.token.email === 'mdomor01815@gmail.com') || (!data.exists() && newData.child('uploaderId').val() === auth.uid) || (data.exists() && data.child('uploaderId').val() === auth.uid && (!newData.exists() || newData.child('uploaderId').val() === auth.uid)))",
+        ".validate": "!newData.exists() || (newData.hasChildren(['id','title','topic','description','videoUrl','uploaderId','uploaderName','createdAt']) && newData.child('id').val() === $resourceId && newData.child('title').isString() && newData.child('title').val().length >= 3 && newData.child('title').val().length <= 150 && newData.child('topic').isString() && newData.child('topic').val().length <= 100 && newData.child('description').isString() && newData.child('description').val().length <= 1000 && newData.child('videoUrl').isString() && newData.child('videoUrl').val().length <= 2000 && newData.child('uploaderId').val() === auth.uid && newData.child('uploaderName').val() === root.child('users').child(auth.uid).child('name').val() && newData.child('createdAt').isNumber())"
       }
     },
     "newsfeed": {
       ".read": "auth != null",
       "$postId": {
-        ".write": "auth != null && (auth.token.admin === true || ((!data.exists() && newData.child('authorId').val() === auth.uid) || (data.child('authorId').val() === auth.uid && newData.child('authorId').val() === auth.uid)))",
-        ".validate": "!newData.exists() || auth.token.admin === true || (newData.child('id').val() === $postId && newData.child('authorId').val() === auth.uid && newData.child('authorName').val() === root.child('users').child(auth.uid).child('name').val() && newData.child('authorRole').val() === root.child('users').child(auth.uid).child('role').val() && newData.child('content').isString() && newData.child('content').val().length >= 1 && newData.child('content').val().length <= 2000)"
+        ".write": "auth != null && auth.token.email_verified === true && ((auth.token.email === 'mdomor01815@gmail.com') || (!data.exists() && newData.child('authorId').val() === auth.uid) || (data.exists() && data.child('authorId').val() === auth.uid && (!newData.exists() || newData.child('authorId').val() === auth.uid)))",
+        ".validate": "!newData.exists() || (newData.child('id').val() === $postId && newData.child('authorId').val() === auth.uid && newData.child('authorName').val() === root.child('users').child(auth.uid).child('name').val() && newData.child('authorRole').val() === root.child('users').child(auth.uid).child('role').val() && newData.child('content').isString() && newData.child('content').val().length >= 1 && newData.child('content').val().length <= 2000 && newData.child('createdAt').isNumber())"
       }
-    },
-    "reviews": {
-      ".read": "auth != null",
-      ".write": false,
-      ".indexOn": ["targetUserId"]
-    },
-    "ratingStats": {
-      ".read": "auth != null",
-      ".write": false
     },
     "flags": {
-      ".read": "auth != null && auth.token.admin === true",
+      ".read": "auth != null && auth.token.email_verified === true && auth.token.email === 'mdomor01815@gmail.com'",
       "$flagId": {
-        ".write": "auth != null && (auth.token.admin === true || (!data.exists() && newData.child('reportedBy').val() === auth.uid && newData.child('status').val() === 'open'))",
-        ".validate": "!newData.exists() || (newData.child('id').val() === $flagId && newData.child('reason').isString() && newData.child('reason').val().length >= 3 && newData.child('reason').val().length <= 500)"
+        ".write": "auth != null && ((auth.token.email_verified === true && auth.token.email === 'mdomor01815@gmail.com') || (!data.exists() && newData.child('reportedBy').val() === auth.uid && newData.child('status').val() === 'open'))",
+        ".validate": "!newData.exists() || (newData.child('id').val() === $flagId && newData.child('reason').isString() && newData.child('reason').val().length >= 3 && newData.child('reason').val().length <= 500 && newData.child('status').isString())"
       }
     },
-    "vendorApplications": {
-      "$uid": {
-        ".read": "auth != null && (auth.uid === $uid || auth.token.admin === true)",
-        ".write": "auth != null && (!data.exists() && auth.uid === $uid && newData.child('uid').val() === auth.uid && newData.child('role').val() === 'vendor' && newData.child('status').val() === 'pending')"
-      }
-    },
-    "rentalReservations": {
-      ".read": false,
-      ".write": false
-    }
+    "userOrders": {".read": false, ".write": false},
+    "vendorOrders": {".read": false, ".write": false},
+    "userRentalBookings": {".read": false, ".write": false},
+    "ratingStats": {".read": false, ".write": false}
   }
 }

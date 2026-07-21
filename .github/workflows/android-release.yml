@@ -1,34 +1,37 @@
-name: Build and publish Android APK
+name: Build and publish Spark Edition APK
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "app/**"
+      - "firebase-database-rules.json"
+      - "firebase.json"
+      - "functions/package.json"
+      - "functions/test/rules.test.js"
+      - ".github/workflows/android-release.yml"
 
 permissions:
   contents: write
   issues: write
 
 jobs:
-  backend-validation:
+  spark-rule-validation:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: functions
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - run: npm install --no-audit --no-fund
-      - run: npm run lint
-      - run: npm test
-      - name: Validate Realtime Database rules
-        working-directory: .
-        run: ./functions/node_modules/.bin/firebase emulators:exec --only database "npm --prefix functions run test:rules" --project demo-foodmobo
+      - name: Install Firebase test tools
+        run: npm install --prefix functions --no-audit --no-fund
+      - name: Test Realtime Database rules
+        run: ./functions/node_modules/.bin/firebase emulators:exec --only database "npm --prefix functions test" --project demo-foodmobo
 
   build-and-release:
-    needs: backend-validation
+    needs: spark-rule-validation
     runs-on: ubuntu-latest
-
     steps:
       - name: Check out source
         uses: actions/checkout@v4
@@ -48,73 +51,47 @@ jobs:
       - name: Configure Gradle cache
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Make Gradle wrapper executable
-        run: chmod +x gradlew
-
-      - name: Run unit tests
-        id: tests
-        continue-on-error: true
+      - name: Test and build Android app
         run: |
-          set -o pipefail
-          ./gradlew testDebugUnitTest --stacktrace 2>&1 | tee test-output.log
-
-      - name: Build installable debug APK
-        id: build
-        if: steps.tests.outcome == 'success'
-        continue-on-error: true
-        run: |
-          set -o pipefail
-          ./gradlew assembleDebug --stacktrace 2>&1 | tee build-output.log
-
-      - name: Report build failure
-        if: steps.tests.outcome == 'failure' || steps.build.outcome == 'failure'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          {
-            echo "The automated Android build failed for commit \`${GITHUB_SHA}\`."
-            echo
-            echo "## Unit-test output"
-            echo '```text'
-            tail -n 160 test-output.log 2>/dev/null || true
-            echo '```'
-            echo
-            echo "## APK-build output"
-            echo '```text'
-            tail -n 200 build-output.log 2>/dev/null || true
-            echo '```'
-          } > build-failure.md
-          gh issue create \
-            --title "Android build failed: ${GITHUB_SHA::7}" \
-            --body-file build-failure.md
-
-      - name: Stop failed build
-        if: steps.tests.outcome == 'failure' || steps.build.outcome == 'failure'
-        run: exit 1
+          chmod +x gradlew
+          ./gradlew testDebugUnitTest assembleDebug --stacktrace
 
       - name: Prepare APK
-        if: steps.tests.outcome == 'success' && steps.build.outcome == 'success'
-        run: cp app/build/outputs/apk/debug/app-debug.apk FoodMoboChain-v1.1.0-debug.apk
+        run: cp app/build/outputs/apk/debug/app-debug.apk FoodMoboChain-v1.1.0-Spark-debug.apk
 
       - name: Upload workflow artifact
-        if: steps.tests.outcome == 'success' && steps.build.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: FoodMoboChain-v1.1.0-debug-apk
-          path: FoodMoboChain-v1.1.0-debug.apk
+          name: FoodMoboChain-v1.1.0-Spark-debug-apk
+          path: FoodMoboChain-v1.1.0-Spark-debug.apk
           if-no-files-found: error
 
       - name: Publish GitHub prerelease
-        if: steps.tests.outcome == 'success' && steps.build.outcome == 'success'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh release view v1.1.0 >/dev/null 2>&1; then
-            gh release upload v1.1.0 FoodMoboChain-v1.1.0-debug.apk --clobber
+          cat > release-notes.md <<'EOF'
+          FoodMoboChain v1.1.0 Spark Edition is a production-oriented MVP that runs without the Blaze plan.
+
+          Included:
+          - Firebase Authentication and email verification
+          - Realtime Database with server-enforced Security Rules
+          - App Check integration
+          - Price-validated vendor-specific orders
+          - Protected order status transitions and delivered-order reviews
+          - Atomic per-day food-cart rental reservations
+          - Verified-email administrator and vendor approval
+          - Public HTTPS links instead of Blaze-only Firebase Storage uploads
+
+          Before live testing, create the default Realtime Database in Firebase Console and deploy `firebase-database-rules.json`. This APK is debug-signed and intended for controlled pilots, testing and demonstration.
+          EOF
+          if gh release view v1.1.0-spark >/dev/null 2>&1; then
+            gh release upload v1.1.0-spark FoodMoboChain-v1.1.0-Spark-debug.apk --clobber
+            gh release edit v1.1.0-spark --notes-file release-notes.md
           else
-            gh release create v1.1.0 FoodMoboChain-v1.1.0-debug.apk \
+            gh release create v1.1.0-spark FoodMoboChain-v1.1.0-Spark-debug.apk \
               --target "$GITHUB_SHA" \
-              --title "FoodMoboChain v1.1.0 Security Preview" \
-              --notes "Security-focused developer preview with trusted Firebase Functions operations, hardened rules and App Check integration. This APK is debug-signed and intended for testing or academic demonstration." \
+              --title "FoodMoboChain v1.1.0 Spark Edition" \
+              --notes-file release-notes.md \
               --prerelease
           fi

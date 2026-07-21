@@ -2,7 +2,6 @@ package com.example.foodmobochain.ui;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -55,7 +54,7 @@ public class MainActivity extends BaseScreenActivity {
         content.addView(hero);
 
         LinearLayout account = Ui.card(this);
-        account.addView(Ui.label(this, user.role + " account"));
+        account.addView(Ui.label(this, firebase.isAdminUser() ? "admin account" : user.role + " account"));
         account.addView(Ui.title(this, safe(user.name, user.email)));
         account.addView(Ui.body(this, statusLine(user)));
         content.addView(account);
@@ -79,11 +78,11 @@ public class MainActivity extends BaseScreenActivity {
                 content.addView(pending);
             }
         }
-        if ("admin".equals(user.role)) {
+        if (firebase.isAdminUser() || "admin".equals(user.role)) {
             addAction("Admin control", "Approve vendors, moderate flags and create starter content.", AdminActivity.class);
         }
 
-        addAction("My profile", "Update personal, business and document information.", ProfileActivity.class);
+        addAction("My profile", "Update personal, business and public document-link information.", ProfileActivity.class);
         Button signOut = Ui.outlineButton(this, "Sign out");
         signOut.setOnClickListener(v -> signOut());
         content.addView(signOut);

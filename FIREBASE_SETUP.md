@@ -1,82 +1,79 @@
-# Firebase production setup
+# Firebase Spark setup
 
-FoodMoboChain connects to the Firebase project identified by `app/google-services.json`. The current configuration targets `foodmobochaindb` and the Android package `com.example.foodmobochain`.
+FoodMoboChain connects to Firebase project `foodmobochaindb-c36f5` with Android package `com.example.foodmobochain`.
 
-## 1. Required Firebase products
+## 1. Enable free Firebase products
 
-Enable these products in the Firebase Console:
+In Firebase Console:
 
-1. Authentication → Email/Password
-2. Realtime Database
-3. Cloud Storage
-4. Cloud Functions
-5. App Check
+1. Authentication → Sign-in method → enable Email/Password.
+2. Build → Realtime Database → Create database.
+3. Choose an appropriate nearby region and start in Locked mode.
+4. App Check → register the Android app.
 
-Cloud Functions deployment requires a Firebase project on the Blaze plan.
+Cloud Functions and Firebase Storage are not required by Spark Edition.
 
-## 2. Install the Firebase CLI
+## 2. Deploy Realtime Database rules
 
-```bash
-npm install -g firebase-tools
-firebase login
-firebase use foodmobochaindb
-```
+A fresh Firebase project must have its default Realtime Database created once in the Console before rules can be deployed.
 
-Run the following commands from the project root.
+The repository contains the secret `FIREBASE_SERVICE_ACCOUNT_JSON`. After the database exists, open GitHub Actions and run:
 
-## 3. Install and test the trusted backend
+**Deploy Spark Realtime Database rules**
+
+Local alternative:
 
 ```bash
 npm install --prefix functions --no-audit --no-fund
-npm test --prefix functions
+./functions/node_modules/.bin/firebase emulators:exec \
+  --only database \
+  "npm --prefix functions test" \
+  --project demo-foodmobo
+
+firebase login
+firebase use foodmobochaindb-c36f5
+firebase deploy --only database
 ```
 
-The backend performs trusted checkout, vendor-specific order creation, controlled order status transitions, rental reservations, vendor approval, review creation and rating aggregation.
+## 3. Administrator
 
-## 4. Configure the administrator
+The verified Firebase Authentication account `mdomor01815@gmail.com` is the administrator. On sign-in, the app synchronizes its profile to role `admin`; Security Rules independently verify the email and `email_verified` token before permitting administrator operations.
 
-The administrator email is no longer hardcoded in the Android application or Security Rules. Configure it as a server-side Functions parameter during deployment:
+Do not change the administrator email in only one place. Keep these synchronized:
 
-```bash
-firebase deploy --only functions
-```
+- `FirebaseService.ADMIN_EMAIL`
+- `firebase-database-rules.json`
 
-When prompted for `ADMIN_EMAIL`, enter the verified administrator address. After deployment, sign out and sign in again with that address. The `bootstrapAdmin` callable function assigns the secure custom claim.
+## 4. Vendor approval
 
-## 5. Safe deployment order
+1. A vendor registers and verifies their email.
+2. Their profile starts with status `pending`.
+3. The administrator opens Admin control and approves or rejects the application.
+4. An approved vendor can publish menu records whose `vendorId` matches their Firebase UID.
 
-Deploy in this order so the Android client is never left without its trusted backend:
+## 5. App Check
 
-```bash
-firebase deploy --only functions
-firebase deploy --only database,storage
-```
+1. Register `com.example.foodmobochain` in Firebase App Check.
+2. Use Play Integrity for production-signed builds.
+3. For the debug APK, run once and copy the debug token from Logcat.
+4. Add the debug token in Firebase Console before enabling enforcement.
+5. Enable enforcement only after Authentication and Realtime Database flows have been tested.
 
-Complete the verification checklist in GitHub issue #3. Only after the backend and rules are confirmed should the **Build and publish Android APK** workflow be run manually to create the `v1.1.0` prerelease.
+## 6. Public media links
 
-## 6. App Check
+Spark Edition does not upload files to Firebase Storage. Use public `https://` links for:
 
-1. Firebase Console → App Check → register the Android app.
-2. Select Play Integrity for production.
-3. For debug builds, run the app once and copy the App Check debug token from Logcat.
-4. Add that token in Firebase Console → App Check → Apps → Manage debug tokens.
-5. Test Authentication, Database, Storage and Functions before enabling enforcement.
-6. Enable enforcement gradually after the debug and production builds are confirmed.
+- tutorial videos
+- profile verification documents
+- future food/news images
 
-## 7. Create accounts and roles
+Do not use a public link for sensitive identity documents in a real commercial deployment. A paid private storage and review workflow should be added before collecting sensitive documents.
 
-- Buyer and Student accounts become active after registration and email verification.
-- Vendor accounts remain pending.
-- An administrator approves or rejects vendors through the Admin screen.
-- Approval is handled by Cloud Functions and assigns the vendor custom claim.
-- Vendors should sign out and sign in again after approval to refresh their ID token.
-
-## 8. Run in Android Studio
+## 7. Android Studio
 
 1. Open the folder containing `settings.gradle.kts`.
-2. Use Android Studio's bundled JDK 17.
+2. Use JDK 17.
 3. Install Android SDK 36 when prompted.
-4. Sync Gradle.
-5. Run on API 24 or newer.
+4. Sync Gradle and run on API 24 or newer.
 
-Do not commit `local.properties`, service-account JSON files, upload keystores or signing passwords.
+Never commit service-account keys, signing keystores, passwords or private user documents.

@@ -1,2 +1,23 @@
 package com.example.foodmobochain.model;
-public class RentalBooking { public String id,cartId,cartName,userId,requestedLocation,status; public long startAt,endAt,createdAt; public int days; public boolean delivery; public double total; public RentalBooking(){} }
+
+import com.google.firebase.database.IgnoreExtraProperties;
+
+@IgnoreExtraProperties
+public class RentalBooking {
+    public String id;
+    public String cartId;
+    public String cartName;
+    public String userId;
+    public String requestedLocation;
+    public String status;
+    public long startAt;
+    public long endAt;
+    public long createdAt;
+    public long updatedAt;
+    public int days;
+    public boolean delivery;
+    public double dailyRate;
+    public double total;
+
+    public RentalBooking() { }
+}

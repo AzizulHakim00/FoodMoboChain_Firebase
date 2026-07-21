@@ -9,6 +9,7 @@ import android.widget.LinearLayout;
 
 import androidx.annotation.NonNull;
 
+import com.example.foodmobochain.data.SparkOperations;
 import com.example.foodmobochain.model.RentalBooking;
 import com.example.foodmobochain.model.RentalCart;
 import com.example.foodmobochain.util.Ui;
@@ -20,9 +21,8 @@ import com.google.firebase.database.ValueEventListener;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Locale;
-import java.util.Map;
+import java.util.TimeZone;
 
 public class RentalActivity extends BaseScreenActivity {
     private LinearLayout cartList;
@@ -33,9 +33,10 @@ public class RentalActivity extends BaseScreenActivity {
         super.onCreate(savedInstanceState);
         setupScreen("Food cart rental", "Choose a cart, date, duration and delivery", true);
         LinearLayout note = Ui.softCard(this);
-        note.addView(Ui.label(this, "REAL-TIME AVAILABILITY"));
+        note.addView(Ui.label(this, "ATOMIC DATE RESERVATIONS"));
         note.addView(Ui.heading(this, "Start small. Sell smart."));
-        note.addView(Ui.body(this, "A server-side transaction prevents two users from booking the same cart for overlapping dates."));
+        note.addView(Ui.body(this,
+                "Each rental day is reserved in one atomic database update, so overlapping requests cannot both succeed."));
         content.addView(note);
         content.addView(Ui.heading(this, "Available carts"));
         cartList = new LinearLayout(this);
@@ -100,7 +101,7 @@ public class RentalActivity extends BaseScreenActivity {
         form.addView(delivery);
         new MaterialAlertDialogBuilder(this)
                 .setTitle(cart.name)
-                .setMessage("The start date must not overlap an active booking.")
+                .setMessage("The selected dates must not overlap an existing reservation.")
                 .setView(form)
                 .setNegativeButton("Cancel", null)
                 .setPositiveButton("Request", (dialog, which) -> book(cart,
@@ -121,6 +122,7 @@ public class RentalActivity extends BaseScreenActivity {
             days = Integer.parseInt(daysText);
             SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
             format.setLenient(false);
+            format.setTimeZone(TimeZone.getTimeZone("UTC"));
             Date date = format.parse(dateText);
             if (date == null) throw new ParseException("Invalid date", 0);
             startAt = date.getTime();
@@ -132,39 +134,37 @@ public class RentalActivity extends BaseScreenActivity {
             Ui.toast(this, "Rental duration must be between 1 and 90 days.");
             return;
         }
-        String uid = firebase.uid();
-        if (uid == null || cart.id == null) return;
-        Map<String, Object> request = new HashMap<>();
-        request.put("cartId", cart.id);
-        request.put("location", location);
-        request.put("startAt", startAt);
-        request.put("days", days);
-        request.put("delivery", delivery);
-        firebase.functions.getHttpsCallable("bookRental").call(request)
-                .addOnCompleteListener(task -> Ui.toast(this, task.isSuccessful()
-                        ? "Rental request submitted securely."
-                        : "The booking could not be saved: " + safeMessage(task.getException())));
+        if (startAt < System.currentTimeMillis() - (24L * 60L * 60L * 1000L)) {
+            Ui.toast(this, "Choose today or a future date.");
+            return;
+        }
+        SparkOperations.bookRental(firebase, cart, location, startAt, days, delivery,
+                (bookingId, error) -> Ui.toast(this,
+                        error == null ? "Rental request submitted."
+                                : "The booking could not be saved: " + safeMessage(error)));
     }
 
     private String safeMessage(Exception exception) {
-        return exception == null ? "Unknown server error." : exception.getLocalizedMessage();
+        return exception == null ? "Unknown database error." : exception.getLocalizedMessage();
     }
 
     private void listenToBookings() {
         String uid = firebase.uid();
         if (uid == null) return;
-        firebase.root.child("userRentalBookings").child(uid)
+        firebase.rentalBookings().orderByChild("userId").equalTo(uid)
                 .addValueEventListener(new ValueEventListener() {
                     @Override
                     public void onDataChange(@NonNull DataSnapshot snapshot) {
                         bookingList.removeAllViews();
                         int count = 0;
                         SimpleDateFormat format = new SimpleDateFormat("dd MMM yyyy", Locale.US);
+                        format.setTimeZone(TimeZone.getTimeZone("UTC"));
                         for (DataSnapshot child : snapshot.getChildren()) {
                             RentalBooking booking = child.getValue(RentalBooking.class);
                             if (booking == null) continue;
                             LinearLayout card = Ui.card(RentalActivity.this);
-                            card.addView(Ui.label(RentalActivity.this, booking.status));
+                            card.addView(Ui.label(RentalActivity.this,
+                                    booking.status == null ? "REQUESTED" : booking.status));
                             card.addView(Ui.title(RentalActivity.this, booking.cartName));
                             card.addView(Ui.body(RentalActivity.this,
                                     format.format(new Date(booking.startAt)) + "  •  " + booking.days

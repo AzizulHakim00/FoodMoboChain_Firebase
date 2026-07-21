@@ -8,6 +8,7 @@ import android.widget.LinearLayout;
 
 import androidx.annotation.NonNull;
 
+import com.example.foodmobochain.data.SparkOperations;
 import com.example.foodmobochain.model.CartLine;
 import com.example.foodmobochain.util.Ui;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -15,7 +16,6 @@ import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.ValueEventListener;
 
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -87,8 +87,8 @@ public class BagActivity extends BaseScreenActivity {
         totalCard.addView(Ui.label(this, "ESTIMATED TOTAL"));
         totalCard.addView(Ui.heading(this, Ui.money(total)));
         totalCard.addView(Ui.body(this,
-                "The secure server checks current menu prices and creates a separate order for each vendor."));
-        Button checkout = Ui.button(this, "Place secure order");
+                "Firebase Security Rules re-check current menu prices, vendor ownership and quantities before accepting each order."));
+        Button checkout = Ui.button(this, "Place protected order");
         checkout.setOnClickListener(v -> askForAddress());
         totalCard.addView(checkout);
         content.addView(totalCard);
@@ -126,30 +126,21 @@ public class BagActivity extends BaseScreenActivity {
     private void createOrder(String address) {
         if (firebase.uid() == null || lines.isEmpty() || checkoutInProgress) return;
         checkoutInProgress = true;
-        Map<String, Object> request = new HashMap<>();
-        request.put("address", address);
-        firebase.functions.getHttpsCallable("placeOrder").call(request)
-                .addOnCompleteListener(task -> {
-                    checkoutInProgress = false;
-                    if (!task.isSuccessful()) {
-                        Ui.toast(this, "Could not place the order: " + safeMessage(task.getException()));
-                        render();
-                        return;
-                    }
-                    int count = 1;
-                    Object data = task.getResult() == null ? null : task.getResult().getData();
-                    if (data instanceof Map) {
-                        Object value = ((Map<?, ?>) data).get("orderCount");
-                        if (value instanceof Number) count = ((Number) value).intValue();
-                    }
-                    Ui.toast(this, count == 1
-                            ? "Order placed securely."
-                            : count + " vendor orders placed securely.");
-                    open(OrdersActivity.class);
-                });
+        SparkOperations.placeOrders(firebase, address, (count, error) -> {
+            checkoutInProgress = false;
+            if (error != null || count == null) {
+                Ui.toast(this, "Could not place the order: " + safeMessage(error));
+                render();
+                return;
+            }
+            Ui.toast(this, count == 1
+                    ? "Order placed with Spark security rules."
+                    : count + " vendor orders placed with Spark security rules.");
+            open(OrdersActivity.class);
+        });
     }
 
     private String safeMessage(Exception exception) {
-        return exception == null ? "Unknown server error." : exception.getLocalizedMessage();
+        return exception == null ? "Unknown database error." : exception.getLocalizedMessage();
     }
 }
