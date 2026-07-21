@@ -47,6 +47,11 @@ public final class SparkOperations {
     }
 
     public static void placeOrders(FirebaseService firebase, String address, Callback<Integer> callback) {
+        placeOrders(firebase, address, "", callback);
+    }
+
+    public static void placeOrders(FirebaseService firebase, String address, String deliveryNote,
+                                   Callback<Integer> callback) {
         String uid = firebase.uid();
         FirebaseUser authUser = firebase.firebaseUser();
         if (uid == null || authUser == null || !authUser.isEmailVerified()) {
@@ -78,10 +83,13 @@ public final class SparkOperations {
                                 throw new IllegalArgumentException("The bag contains an invalid item.");
                             }
                             FoodItem official = foodTask.getResult().child(foodId).getValue(FoodItem.class);
-                            if (official == null || !official.available || official.vendorId == null) {
+                            if (official == null || !official.inStock() || official.vendorId == null) {
                                 throw new IllegalArgumentException("An item is no longer available. Refresh your bag.");
                             }
-                            FoodOrder order = grouped.get(official.vendorId);
+                            String storeId = official.storeId == null || official.storeId.trim().isEmpty()
+                                    ? official.vendorId : official.storeId;
+                            String groupKey = official.vendorId + "::" + storeId;
+                            FoodOrder order = grouped.get(groupKey);
                             if (order == null) {
                                 String orderId = firebase.orders().push().getKey();
                                 if (orderId == null) throw new IllegalStateException("Could not create an order ID.");
@@ -89,12 +97,16 @@ public final class SparkOperations {
                                 order.id = orderId;
                                 order.buyerId = uid;
                                 order.vendorId = official.vendorId;
+                                order.storeId = storeId;
+                                order.storeName = official.vendorName;
                                 order.buyerName = profile.name;
                                 order.address = address;
+                                order.deliveryNote = deliveryNote == null ? "" : deliveryNote.trim();
+                                order.paymentMethod = "cash_on_delivery";
                                 order.status = "placed";
                                 order.createdAt = System.currentTimeMillis();
                                 order.updatedAt = order.createdAt;
-                                grouped.put(official.vendorId, order);
+                                grouped.put(groupKey, order);
                             }
                             order.items.put(foodId, new CartLine(official, requested.quantity));
                         }
@@ -269,7 +281,8 @@ public final class SparkOperations {
     private static String nextStatus(String status) {
         if ("placed".equals(status)) return "accepted";
         if ("accepted".equals(status)) return "preparing";
-        if ("preparing".equals(status)) return "out_for_delivery";
+        if ("preparing".equals(status)) return "packed";
+        if ("packed".equals(status)) return "out_for_delivery";
         if ("out_for_delivery".equals(status)) return "delivered";
         return null;
     }

@@ -2,21 +2,29 @@ package com.example.foodmobochain.ui;
 
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.Spinner;
 
 import androidx.annotation.NonNull;
 
+import com.example.foodmobochain.R;
 import com.example.foodmobochain.data.SparkOperations;
 import com.example.foodmobochain.model.CartLine;
+import com.example.foodmobochain.model.UserAddress;
+import com.example.foodmobochain.util.ImageLoader;
 import com.example.foodmobochain.util.Ui;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.ValueEventListener;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 public class BagActivity extends BaseScreenActivity {
@@ -27,7 +35,7 @@ public class BagActivity extends BaseScreenActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setupScreen("Your bag", "Check quantities before placing the order", true);
+        setupScreen("Your bag", "Review store groups, quantities and delivery details", true);
         listenToBag();
     }
 
@@ -57,10 +65,10 @@ public class BagActivity extends BaseScreenActivity {
         if (lines.isEmpty()) {
             LinearLayout empty = Ui.softCard(this);
             empty.addView(Ui.heading(this, "Your bag is empty."));
-            empty.addView(Ui.body(this, "Browse the food catalogue and add something fresh."));
-            Button browse = Ui.button(this, "Browse foods");
-            browse.setOnClickListener(v -> open(FoodCatalogActivity.class));
-            empty.addView(browse);
+            empty.addView(Ui.body(this, "Browse stores and add something fresh."));
+            Button stores = Ui.button(this, "Browse stores");
+            stores.setOnClickListener(v -> open(StoresActivity.class));
+            empty.addView(stores);
             content.addView(empty);
             return;
         }
@@ -70,8 +78,17 @@ public class BagActivity extends BaseScreenActivity {
             CartLine line = entry.getValue();
             total += line.unitPrice * line.quantity;
             LinearLayout card = Ui.card(this);
+            if (!TextUtils.isEmpty(line.imageUrl)) {
+                ImageView image = new ImageView(this);
+                image.setContentDescription(line.name + " image");
+                image.setLayoutParams(new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT, Ui.dp(this, 125)));
+                ImageLoader.load(image, line.imageUrl, R.drawable.ic_food_plate);
+                card.addView(image);
+            }
+            card.addView(Ui.label(this, TextUtils.isEmpty(line.vendorName) ? "MARKETPLACE STORE" : line.vendorName));
             card.addView(Ui.title(this, line.name));
-            card.addView(Ui.body(this, line.vendorName + "  •  " + Ui.money(line.unitPrice) + " each"));
+            card.addView(Ui.body(this, Ui.money(line.unitPrice) + " each"));
             card.addView(Ui.title(this, "Quantity: " + line.quantity + "  •  "
                     + Ui.money(line.unitPrice * line.quantity)));
             Button plus = Ui.outlineButton(this, "+ Add one");
@@ -84,12 +101,15 @@ public class BagActivity extends BaseScreenActivity {
         }
 
         LinearLayout totalCard = Ui.softCard(this);
-        totalCard.addView(Ui.label(this, "ESTIMATED TOTAL"));
+        totalCard.addView(Ui.label(this, "CASH ON DELIVERY TOTAL"));
         totalCard.addView(Ui.heading(this, Ui.money(total)));
         totalCard.addView(Ui.body(this,
-                "Firebase Security Rules re-check current menu prices, vendor ownership and quantities before accepting each order."));
-        Button checkout = Ui.button(this, "Place protected order");
-        checkout.setOnClickListener(v -> askForAddress());
+                "Items from different stores become separate orders. Firebase re-checks each official price, store owner and quantity before saving them."));
+        Button addresses = Ui.outlineButton(this, "Manage saved addresses");
+        addresses.setOnClickListener(v -> open(AddressBookActivity.class));
+        totalCard.addView(addresses);
+        Button checkout = Ui.button(this, "Continue to protected checkout");
+        checkout.setOnClickListener(v -> loadAddressesForCheckout());
         totalCard.addView(checkout);
         content.addView(totalCard);
     }
@@ -97,36 +117,66 @@ public class BagActivity extends BaseScreenActivity {
     private void updateQuantity(String foodId, int quantity) {
         String uid = firebase.uid();
         if (uid == null || checkoutInProgress) return;
-        if (quantity <= 0) {
-            firebase.carts().child(uid).child(foodId).removeValue();
-        } else {
-            firebase.carts().child(uid).child(foodId).child("quantity").setValue(quantity);
-        }
+        if (quantity <= 0) firebase.carts().child(uid).child(foodId).removeValue();
+        else firebase.carts().child(uid).child(foodId).child("quantity").setValue(Math.min(20, quantity));
     }
 
-    private void askForAddress() {
-        EditText address = Ui.input(this, "Delivery address");
-        address.setSingleLine(false);
-        address.setMinLines(2);
+    private void loadAddressesForCheckout() {
+        String uid = firebase.uid();
+        if (uid == null) return;
+        firebase.addresses().child(uid).get().addOnCompleteListener(task -> {
+            List<UserAddress> saved = new ArrayList<>();
+            if (task.isSuccessful()) {
+                for (DataSnapshot child : task.getResult().getChildren()) {
+                    UserAddress address = child.getValue(UserAddress.class);
+                    if (address != null) saved.add(address);
+                }
+            }
+            saved.sort((left, right) -> Boolean.compare(right.defaultAddress, left.defaultAddress));
+            showCheckoutDialog(saved);
+        });
+    }
+
+    private void showCheckoutDialog(List<UserAddress> saved) {
+        LinearLayout form = new LinearLayout(this);
+        form.setOrientation(LinearLayout.VERTICAL);
+        form.setPadding(Ui.dp(this, 20), 0, Ui.dp(this, 20), 0);
+        List<String> labels = new ArrayList<>();
+        for (UserAddress address : saved) labels.add((address.defaultAddress ? "Default · " : "")
+                + address.label + " — " + address.displayAddress());
+        labels.add("Enter another address");
+        Spinner selector = new Spinner(this);
+        selector.setAdapter(new ArrayAdapter<>(this,
+                android.R.layout.simple_spinner_dropdown_item, labels));
+        EditText manualAddress = Ui.input(this, "Another delivery address");
+        manualAddress.setSingleLine(false);
+        manualAddress.setMinLines(2);
+        EditText note = Ui.input(this, "Delivery note: floor, landmark or instructions");
+        note.setSingleLine(false);
+        form.addView(selector);
+        form.addView(manualAddress);
+        form.addView(note);
         new MaterialAlertDialogBuilder(this)
-                .setTitle("Delivery details")
-                .setMessage("Enter where the vendor should deliver this order.")
-                .setView(address)
+                .setTitle("Delivery and payment")
+                .setMessage("Payment method: Cash on delivery")
+                .setView(form)
                 .setNegativeButton("Cancel", null)
                 .setPositiveButton("Place order", (dialog, which) -> {
-                    String value = address.getText().toString().trim();
-                    if (TextUtils.isEmpty(value) || value.length() < 5) {
-                        Ui.toast(this, "A valid delivery address is required.");
-                    } else {
-                        createOrder(value);
-                    }
+                    int selected = selector.getSelectedItemPosition();
+                    String address = selected < saved.size()
+                            ? saved.get(selected).displayAddress()
+                            : manualAddress.getText().toString().trim();
+                    String deliveryNote = note.getText().toString().trim();
+                    if (TextUtils.isEmpty(address) || address.length() < 5) {
+                        Ui.toast(this, "Select a saved address or enter a valid delivery address.");
+                    } else createOrder(address, deliveryNote);
                 }).show();
     }
 
-    private void createOrder(String address) {
+    private void createOrder(String address, String note) {
         if (firebase.uid() == null || lines.isEmpty() || checkoutInProgress) return;
         checkoutInProgress = true;
-        SparkOperations.placeOrders(firebase, address, (count, error) -> {
+        SparkOperations.placeOrders(firebase, address, note, (count, error) -> {
             checkoutInProgress = false;
             if (error != null || count == null) {
                 Ui.toast(this, "Could not place the order: " + safeMessage(error));
@@ -134,8 +184,8 @@ public class BagActivity extends BaseScreenActivity {
                 return;
             }
             Ui.toast(this, count == 1
-                    ? "Order placed with Spark security rules."
-                    : count + " vendor orders placed with Spark security rules.");
+                    ? "Protected order placed successfully."
+                    : count + " store orders placed successfully.");
             open(OrdersActivity.class);
         });
     }

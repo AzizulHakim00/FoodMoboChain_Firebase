@@ -38,15 +38,13 @@ public class OrdersActivity extends BaseScreenActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setupScreen("Orders & tracking", "Live delivery progress and trusted reviews", true);
-
+        setupScreen("Orders & tracking", "Live store progress, delivery details and trusted reviews", true);
         LinearLayout intro = Ui.softCard(this);
         intro.addView(Ui.label(this, "REAL-TIME ORDER CENTRE"));
-        intro.addView(Ui.heading(this, "Know what is happening at every step."));
+        intro.addView(Ui.heading(this, "Follow every store order from placement to delivery."));
         intro.addView(Ui.body(this,
-                "Order status changes are restricted to the approved vendor and appear here immediately."));
+                "Items from separate stores appear as separate orders. Only the owning vendor or administrator can progress an order."));
         content.addView(intro);
-
         content.addView(Ui.heading(this, "My food orders"));
         buyerList = new LinearLayout(this);
         buyerList.setOrientation(LinearLayout.VERTICAL);
@@ -105,21 +103,22 @@ public class OrdersActivity extends BaseScreenActivity {
     private LinearLayout orderCard(FoodOrder order, boolean vendorView) {
         LinearLayout card = Ui.card(this);
         card.addView(Ui.label(this, order.status == null ? "PLACED" : order.status.replace('_', ' ')));
-        card.addView(Ui.title(this, "Order " + shortId(order.id) + "  •  " + Ui.money(order.computedTotal())));
-        card.addView(Ui.body(this, DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT)
+        card.addView(Ui.title(this, safe(order.storeName, "Marketplace store")));
+        card.addView(Ui.body(this, "Order " + shortId(order.id) + "  •  " + Ui.money(order.computedTotal())
+                + "  •  " + DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT)
                 .format(new Date(order.createdAt))));
-
         if (!"cancelled".equals(order.status)) card.addView(statusTimeline(order.status));
         else {
             TextView cancelled = Ui.title(this, "Order cancelled");
             cancelled.setTextColor(getColor(R.color.brand_danger));
             card.addView(cancelled);
         }
-
         card.addView(Ui.body(this, statusMessage(order.status)));
-        if (vendorView) card.addView(Ui.body(this,
-                "Buyer: " + order.buyerName + "\nDeliver to: " + order.address));
-        else card.addView(Ui.body(this, "Delivery address: " + order.address));
+        String details = (vendorView ? "Buyer: " + order.buyerName + "\n" : "")
+                + "Deliver to: " + order.address
+                + (TextUtils.isEmpty(order.deliveryNote) ? "" : "\nDelivery note: " + order.deliveryNote)
+                + "\nPayment: Cash on delivery";
+        card.addView(Ui.body(this, details));
 
         LinearLayout itemsCard = Ui.softCard(this);
         itemsCard.addView(Ui.label(this, "ORDER SUMMARY"));
@@ -156,7 +155,7 @@ public class OrdersActivity extends BaseScreenActivity {
     }
 
     private LinearLayout statusTimeline(String status) {
-        String[] labels = {"Placed", "Accepted", "Preparing", "On the way", "Delivered"};
+        String[] labels = {"Placed", "Accepted", "Preparing", "Packed", "On way", "Delivered"};
         int active = statusIndex(status);
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
@@ -175,7 +174,7 @@ public class OrdersActivity extends BaseScreenActivity {
             TextView dot = Ui.title(this, i <= active ? "●" : "○");
             dot.setGravity(Gravity.CENTER);
             dot.setTextColor(getColor(i <= active ? R.color.brand_green : R.color.brand_muted));
-            TextView label = Ui.text(this, labels[i], 9,
+            TextView label = Ui.text(this, labels[i], 8,
                     i <= active ? R.color.brand_green_dark : R.color.brand_muted);
             label.setGravity(Gravity.CENTER);
             step.addView(dot);
@@ -188,24 +187,27 @@ public class OrdersActivity extends BaseScreenActivity {
     private int statusIndex(String status) {
         if ("accepted".equals(status)) return 1;
         if ("preparing".equals(status)) return 2;
-        if ("out_for_delivery".equals(status)) return 3;
-        if ("delivered".equals(status)) return 4;
+        if ("packed".equals(status)) return 3;
+        if ("out_for_delivery".equals(status)) return 4;
+        if ("delivered".equals(status)) return 5;
         return 0;
     }
 
     private String statusMessage(String status) {
-        if ("accepted".equals(status)) return "The seller confirmed your order and will begin preparation soon.";
+        if ("accepted".equals(status)) return "The store confirmed your order and will begin preparation soon.";
         if ("preparing".equals(status)) return "Your food is being prepared. The next update will appear automatically.";
-        if ("out_for_delivery".equals(status)) return "Your food has left the seller and is travelling to the delivery address.";
+        if ("packed".equals(status)) return "Your order is packed and waiting for dispatch.";
+        if ("out_for_delivery".equals(status)) return "Your food has left the store and is travelling to the delivery address.";
         if ("delivered".equals(status)) return "Delivered successfully. Share a review to help the community.";
         if ("cancelled".equals(status)) return "This order will not progress further.";
-        return "The order is waiting for the seller to accept it.";
+        return "The order is waiting for the store to accept it.";
     }
 
     private String nextStatusLabel(String status) {
         if ("placed".equals(status)) return "Accept order";
         if ("accepted".equals(status)) return "Mark as preparing";
-        if ("preparing".equals(status)) return "Mark out for delivery";
+        if ("preparing".equals(status)) return "Mark as packed";
+        if ("packed".equals(status)) return "Mark out for delivery";
         if ("out_for_delivery".equals(status)) return "Mark as delivered";
         return null;
     }
@@ -254,5 +256,9 @@ public class OrdersActivity extends BaseScreenActivity {
     private String shortId(String id) {
         if (id == null) return "";
         return id.length() <= 7 ? id : id.substring(id.length() - 7);
+    }
+
+    private String safe(String value, String fallback) {
+        return value == null || value.trim().isEmpty() ? fallback : value;
     }
 }

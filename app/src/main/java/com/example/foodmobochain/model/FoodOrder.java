@@ -11,8 +11,12 @@ public class FoodOrder {
     public String id;
     public String buyerId;
     public String vendorId;
+    public String storeId;
+    public String storeName;
     public String buyerName;
     public String address;
+    public String deliveryNote;
+    public String paymentMethod;
     public String status;
     public long createdAt;
     public long updatedAt;

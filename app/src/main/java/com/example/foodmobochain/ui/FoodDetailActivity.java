@@ -36,15 +36,21 @@ public class FoodDetailActivity extends BaseScreenActivity {
         intent.putExtra("id", item.id);
         intent.putExtra("vendorId", item.vendorId);
         intent.putExtra("vendorName", item.vendorName);
+        intent.putExtra("storeId", item.storeId);
         intent.putExtra("name", item.name);
         intent.putExtra("description", item.description);
         intent.putExtra("category", item.category);
         intent.putExtra("imageUrl", item.imageUrl);
+        intent.putExtra("tags", item.tags);
         intent.putExtra("price", item.price);
+        intent.putExtra("regularPrice", item.regularPrice);
         intent.putExtra("rating", item.rating);
         intent.putExtra("deliveryFee", item.deliveryFee);
         intent.putExtra("discountPercent", item.discountPercent);
         intent.putExtra("preparationMinutes", item.preparationMinutes);
+        intent.putExtra("stockCount", item.stockCount);
+        intent.putExtra("spicyLevel", item.spicyLevel);
+        intent.putExtra("vegetarian", item.vegetarian);
         intent.putExtra("featured", item.featured);
         intent.putExtra("createdAt", item.createdAt);
         intent.putExtra("available", item.available);
@@ -56,7 +62,7 @@ public class FoodDetailActivity extends BaseScreenActivity {
         super.onCreate(savedInstanceState);
         item = readItem();
         setupScreen(item.name == null ? "Food details" : item.name,
-                item.vendorName == null ? "Local vendor" : item.vendorName, true);
+                item.vendorName == null ? "Local store" : item.vendorName, true);
         render();
     }
 
@@ -66,15 +72,21 @@ public class FoodDetailActivity extends BaseScreenActivity {
         value.id = intent.getStringExtra("id");
         value.vendorId = intent.getStringExtra("vendorId");
         value.vendorName = intent.getStringExtra("vendorName");
+        value.storeId = intent.getStringExtra("storeId");
         value.name = intent.getStringExtra("name");
         value.description = intent.getStringExtra("description");
         value.category = intent.getStringExtra("category");
         value.imageUrl = intent.getStringExtra("imageUrl");
+        value.tags = intent.getStringExtra("tags");
         value.price = intent.getDoubleExtra("price", 0);
+        value.regularPrice = intent.getDoubleExtra("regularPrice", value.price);
         value.rating = intent.getDoubleExtra("rating", 0);
         value.deliveryFee = intent.getDoubleExtra("deliveryFee", 0);
         value.discountPercent = intent.getDoubleExtra("discountPercent", 0);
         value.preparationMinutes = intent.getIntExtra("preparationMinutes", 20);
+        value.stockCount = intent.getIntExtra("stockCount", 1);
+        value.spicyLevel = intent.getIntExtra("spicyLevel", 0);
+        value.vegetarian = intent.getBooleanExtra("vegetarian", false);
         value.featured = intent.getBooleanExtra("featured", false);
         value.createdAt = intent.getLongExtra("createdAt", 0);
         value.available = intent.getBooleanExtra("available", true);
@@ -83,19 +95,26 @@ public class FoodDetailActivity extends BaseScreenActivity {
 
     private void render() {
         content.removeAllViews();
-
         ImageView image = new ImageView(this);
         image.setContentDescription(item.name + " image");
         image.setLayoutParams(new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, Ui.dp(this, 240)));
+                LinearLayout.LayoutParams.MATCH_PARENT, Ui.dp(this, 250)));
         image.setBackgroundResource(R.drawable.bg_soft_card);
         ImageLoader.load(image, item.imageUrl, R.drawable.ic_food_plate);
         content.addView(image);
 
         LinearLayout card = Ui.card(this);
-        card.addView(Ui.label(this, safe(item.category, "POPULAR DISH")));
+        String badge = safe(item.category, "POPULAR DISH");
+        if (item.discountPercent > 0) badge += "  •  "
+                + String.format(Locale.US, "%.0f%% OFF", item.discountPercent);
+        card.addView(Ui.label(this, badge));
         card.addView(Ui.heading(this, safe(item.name, "Food item")));
-        card.addView(Ui.body(this, safe(item.description, "Freshly prepared by a local FoodMoboChain partner.")));
+        card.addView(Ui.body(this, safe(item.description,
+                "Freshly prepared by a local FoodMoboChain partner.")));
+        String attributes = (item.vegetarian ? "Vegetarian  •  " : "")
+                + (item.spicyLevel > 0 ? "Spice " + item.spicyLevel + "/3  •  " : "")
+                + safe(item.tags, "Fresh marketplace item");
+        card.addView(Ui.body(this, attributes));
         card.addView(Ui.spacer(this, 10));
 
         String meta = "★ " + String.format(Locale.US, "%.1f", item.rating > 0 ? item.rating : 4.7)
@@ -103,15 +122,15 @@ public class FoodDetailActivity extends BaseScreenActivity {
                 + (Math.max(10, item.preparationMinutes) + 10) + " min"
                 + "   •   " + (item.deliveryFee <= 0 ? "Free delivery" : Ui.money(item.deliveryFee) + " delivery");
         card.addView(Ui.body(this, meta));
-
-        if (item.discountPercent > 0) {
-            card.addView(Ui.label(this, String.format(Locale.US, "%.0f%% OFF", item.discountPercent)));
-            TextView oldPrice = Ui.body(this, "Regular price " + Ui.money(item.price));
-            card.addView(oldPrice);
+        if (item.listPrice() > item.price) {
+            card.addView(Ui.body(this, "Regular price " + Ui.money(item.listPrice())));
         }
-        TextView price = Ui.heading(this, Ui.money(item.salePrice()));
+        TextView price = Ui.heading(this, Ui.money(item.price));
         price.setTextColor(getColor(R.color.brand_orange));
         card.addView(price);
+        card.addView(Ui.body(this, item.inStock()
+                ? (item.stockCount > 0 ? item.stockCount + " portions currently available" : "Available now")
+                : "Currently unavailable"));
 
         LinearLayout quantityRow = new LinearLayout(this);
         quantityRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -119,16 +138,12 @@ public class FoodDetailActivity extends BaseScreenActivity {
         Button minus = compactButton("−");
         quantityView = Ui.title(this, String.valueOf(quantity));
         quantityView.setGravity(Gravity.CENTER);
-        LinearLayout.LayoutParams quantityParams = new LinearLayout.LayoutParams(0,
-                Ui.dp(this, 48), 1f);
-        quantityView.setLayoutParams(quantityParams);
+        quantityView.setLayoutParams(new LinearLayout.LayoutParams(0, Ui.dp(this, 48), 1f));
         Button plus = compactButton("+");
-        minus.setOnClickListener(v -> {
-            if (quantity > 1) quantity--;
-            refreshQuantity();
-        });
+        minus.setOnClickListener(v -> { if (quantity > 1) quantity--; refreshQuantity(); });
         plus.setOnClickListener(v -> {
-            if (quantity < 20) quantity++;
+            int max = item.stockCount > 0 ? Math.min(20, item.stockCount) : 20;
+            if (quantity < max) quantity++;
             refreshQuantity();
         });
         quantityRow.addView(minus);
@@ -136,28 +151,29 @@ public class FoodDetailActivity extends BaseScreenActivity {
         quantityRow.addView(plus);
         card.addView(quantityRow);
 
-        addButton = Ui.button(this, "Add to bag — " + Ui.money(item.salePrice() * quantity));
-        addButton.setEnabled(item.available);
+        addButton = Ui.button(this, "Add to bag — " + Ui.money(item.price * quantity));
+        addButton.setEnabled(item.inStock());
         addButton.setOnClickListener(v -> addToBag());
         card.addView(addButton);
-
         favoriteButton = Ui.outlineButton(this, favoriteText());
         favoriteButton.setOnClickListener(v -> {
             FavoritesStore.toggle(this, item.id);
             favoriteButton.setText(favoriteText());
         });
         card.addView(favoriteButton);
-
-        Button store = Ui.outlineButton(this, "View " + safe(item.vendorName, "vendor") + " menu");
-        store.setOnClickListener(v -> VendorStoreActivity.open(this, item.vendorId, item.vendorName));
+        Button store = Ui.outlineButton(this, "View " + safe(item.vendorName, "store") + " menu");
+        store.setOnClickListener(v -> {
+            if (item.storeId != null) VendorStoreActivity.openStore(this, item.storeId, item.vendorName);
+            else VendorStoreActivity.open(this, item.vendorId, item.vendorName);
+        });
         card.addView(store);
         content.addView(card);
 
         LinearLayout promise = Ui.softCard(this);
         promise.addView(Ui.label(this, "FOODMOBILE PROMISE"));
-        promise.addView(Ui.title(this, "Transparent price. Verified seller. Protected order."));
+        promise.addView(Ui.title(this, "The displayed checkout price is the official database price."));
         promise.addView(Ui.body(this,
-                "The database rules verify the official menu price and vendor before accepting your order."));
+                "Firebase Security Rules verify food availability, store ownership, quantity and unit price before accepting an order."));
         content.addView(promise);
     }
 
@@ -170,7 +186,7 @@ public class FoodDetailActivity extends BaseScreenActivity {
 
     private void refreshQuantity() {
         quantityView.setText(String.valueOf(quantity));
-        addButton.setText("Add to bag — " + Ui.money(item.salePrice() * quantity));
+        addButton.setText("Add to bag — " + Ui.money(item.price * quantity));
     }
 
     private String favoriteText() {
@@ -179,7 +195,7 @@ public class FoodDetailActivity extends BaseScreenActivity {
 
     private void addToBag() {
         String uid = firebase.uid();
-        if (uid == null || item.id == null || !item.available) return;
+        if (uid == null || item.id == null || !item.inStock()) return;
         addButton.setEnabled(false);
         firebase.carts().child(uid).child(item.id).runTransaction(new Transaction.Handler() {
             @NonNull
@@ -188,14 +204,15 @@ public class FoodDetailActivity extends BaseScreenActivity {
                 CartLine line = currentData.getValue(CartLine.class);
                 if (line == null) line = new CartLine(item, 0);
                 line.unitPrice = item.price;
-                line.quantity = Math.min(20, line.quantity + quantity);
+                int max = item.stockCount > 0 ? Math.min(20, item.stockCount) : 20;
+                line.quantity = Math.min(max, line.quantity + quantity);
                 currentData.setValue(line);
                 return Transaction.success(currentData);
             }
 
             @Override
             public void onComplete(DatabaseError error, boolean committed, DataSnapshot snapshot) {
-                addButton.setEnabled(true);
+                addButton.setEnabled(item.inStock());
                 Ui.toast(FoodDetailActivity.this, committed
                         ? quantity + " × " + item.name + " added to your bag."
                         : "Could not update your bag.");

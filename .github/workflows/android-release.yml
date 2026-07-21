@@ -1,4 +1,4 @@
-name: Build and publish FoodMoboChain v1.2
+name: Build and publish FoodMoboChain v1.3
 
 on:
   workflow_dispatch:
@@ -9,11 +9,11 @@ on:
       - "firebase-database-rules.json"
       - "firebase.json"
       - "functions/package.json"
-      - "functions/test/rules.test.js"
+      - "functions/test/*.test.js"
       - ".github/workflows/android-release.yml"
 
 concurrency:
-  group: foodmobochain-v1-2-release
+  group: foodmobochain-v1-3-release
   cancel-in-progress: true
 
 permissions:
@@ -61,13 +61,13 @@ jobs:
           ./gradlew testDebugUnitTest assembleDebug --stacktrace
 
       - name: Prepare APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk FoodMoboChain-v1.2.0-Enterprise-debug.apk
+        run: cp app/build/outputs/apk/debug/app-debug.apk FoodMoboChain-v1.3.0-Large-Marketplace-debug.apk
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: FoodMoboChain-v1.2.0-Enterprise-debug-apk
-          path: FoodMoboChain-v1.2.0-Enterprise-debug.apk
+          name: FoodMoboChain-v1.3.0-Large-Marketplace-debug-apk
+          path: FoodMoboChain-v1.3.0-Large-Marketplace-debug.apk
           if-no-files-found: error
 
       - name: Publish GitHub prerelease
@@ -75,30 +75,34 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           cat > release-notes.md <<'EOF'
-          FoodMoboChain v1.2.0 introduces a complete enterprise-style marketplace experience while remaining compatible with the Firebase Spark plan.
+          FoodMoboChain v1.3.0 Large Marketplace substantially expands the Firebase Spark application into a multi-store food ecosystem.
 
           Included:
-          - Foodpanda-inspired marketplace home and discovery experience
-          - Professional food photography loaded through cached public HTTPS media
-          - Search, categories, sorting, favourites and vendor storefronts
-          - Rich food-detail pages with preparation and delivery information
-          - Protected cart and vendor-specific checkout
-          - Live visual order tracking from placed through delivered
-          - Unified order and announcement notifications
-          - Vendor seller centre with menu images, logistics and availability
-          - Administrator catalogue seeding, seller approval and moderation
-          - Food-cart rentals, training, newsfeed, profiles and verified reviews
+          - Store directory and store-specific menu pages
+          - Repeatable large starter database with 12 stores and 72 foods
+          - 22 categories, 8 campaigns, 10 delivery zones and 20 community posts
+          - Professional public HTTPS food, store and rental-cart imagery
+          - Official discounted checkout prices with regular-price comparison
+          - Stock-aware catalogue, carts and Firebase Security Rules
+          - Search by food, category, tags and store
+          - Saved home, work and campus delivery addresses
+          - Store-split cash-on-delivery checkout with delivery notes
+          - Six-stage order flow: placed, accepted, preparing, packed, out for delivery and delivered
+          - Support-ticket conversations with administrator replies
+          - Admin and vendor marketplace analytics
+          - Approved-vendor storefront creation and inventory management
+          - 12 rental carts and 12 training resources
           - Firebase Authentication, App Check and server-enforced Realtime Database Security Rules
 
           The APK is debug-signed for direct installation and controlled real-user testing. Keep App Check enforcement disabled until its debug token is registered.
           EOF
-          if gh release view v1.2.0-enterprise >/dev/null 2>&1; then
-            gh release upload v1.2.0-enterprise FoodMoboChain-v1.2.0-Enterprise-debug.apk --clobber
-            gh release edit v1.2.0-enterprise --notes-file release-notes.md --target "$GITHUB_SHA"
+          if gh release view v1.3.0-large-marketplace >/dev/null 2>&1; then
+            gh release upload v1.3.0-large-marketplace FoodMoboChain-v1.3.0-Large-Marketplace-debug.apk --clobber
+            gh release edit v1.3.0-large-marketplace --notes-file release-notes.md --target "$GITHUB_SHA"
           else
-            gh release create v1.2.0-enterprise FoodMoboChain-v1.2.0-Enterprise-debug.apk \
+            gh release create v1.3.0-large-marketplace FoodMoboChain-v1.3.0-Large-Marketplace-debug.apk \
               --target "$GITHUB_SHA" \
-              --title "FoodMoboChain v1.2.0 Enterprise Marketplace" \
+              --title "FoodMoboChain v1.3.0 Large Marketplace" \
               --notes-file release-notes.md \
               --prerelease
           fi
@@ -108,5 +112,5 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh issue create \
-            --title "FoodMoboChain v1.2.0 published" \
-            --body "The enterprise marketplace APK was validated and published as \`FoodMoboChain-v1.2.0-Enterprise-debug.apk\` by workflow run ${GITHUB_RUN_ID}." || true
+            --title "FoodMoboChain v1.3.0 published" \
+            --body "The large marketplace APK was validated and published as \`FoodMoboChain-v1.3.0-Large-Marketplace-debug.apk\` by workflow run ${GITHUB_RUN_ID}." || true
