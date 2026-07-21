@@ -10,9 +10,11 @@ import com.google.firebase.database.FirebaseDatabase;
 
 public final class FirebaseService {
     public static final String ADMIN_EMAIL = "mdomor01815@gmail.com";
+    public static final String DATABASE_URL =
+            "https://foodmobochaindb-c36f5-default-rtdb.asia-southeast1.firebasedatabase.app";
 
     public final FirebaseAuth auth = FirebaseAuth.getInstance();
-    public final DatabaseReference root = FirebaseDatabase.getInstance().getReference();
+    public final DatabaseReference root = FirebaseDatabase.getInstance(DATABASE_URL).getReference();
 
     private static final FirebaseService INSTANCE = new FirebaseService();
 
