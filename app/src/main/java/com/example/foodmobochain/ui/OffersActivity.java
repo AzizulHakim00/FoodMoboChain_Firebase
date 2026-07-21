@@ -29,7 +29,7 @@ public class OffersActivity extends BaseScreenActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setupScreen("Offers & promotions", "Live marketplace deals without coupon confusion", true);
+        setupScreen("Offers & promotions", "Live marketplace deals with authoritative checkout prices", true);
         banners = new LinearLayout(this);
         banners.setOrientation(LinearLayout.VERTICAL);
         discountedFoods = new LinearLayout(this);
@@ -111,6 +111,8 @@ public class OffersActivity extends BaseScreenActivity {
         action.setOnClickListener(v -> {
             if ("store".equals(banner.actionType)) {
                 VendorStoreActivity.openStore(this, banner.actionValue, banner.title);
+            } else if ("rentals".equals(banner.actionValue)) {
+                open(RentalActivity.class);
             } else {
                 open(FoodCatalogActivity.class);
             }
@@ -130,7 +132,7 @@ public class OffersActivity extends BaseScreenActivity {
         card.addView(Ui.label(this, String.format(Locale.US, "%.0f%% OFF", item.discountPercent)));
         card.addView(Ui.title(this, item.name));
         card.addView(Ui.body(this, item.vendorName + "  •  " + item.category));
-        TextView price = Ui.heading(this, Ui.money(item.salePrice()) + "  ·  was " + Ui.money(item.price));
+        TextView price = Ui.heading(this, Ui.money(item.price) + "  ·  was " + Ui.money(item.listPrice()));
         price.setTextColor(getColor(R.color.brand_orange));
         card.addView(price);
         Button view = Ui.button(this, "View discounted dish");
