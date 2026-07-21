@@ -14,6 +14,7 @@ import androidx.annotation.NonNull;
 import com.example.foodmobochain.R;
 import com.example.foodmobochain.model.AppUser;
 import com.example.foodmobochain.model.FoodItem;
+import com.example.foodmobochain.model.MarketplaceStore;
 import com.example.foodmobochain.util.ImageLoader;
 import com.example.foodmobochain.util.Ui;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -32,6 +33,7 @@ public class VendorMenuActivity extends BaseScreenActivity {
     private EditText imageUrl;
     private EditText preparationMinutes;
     private EditText deliveryFee;
+    private EditText stockCount;
     private android.widget.Spinner category;
     private CheckBox available;
     private CheckBox featured;
@@ -44,23 +46,46 @@ public class VendorMenuActivity extends BaseScreenActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setupScreen("Vendor menu studio", "Publish professional listings for your customers", true);
+        setupScreen("Vendor seller centre", "Storefront, inventory and professional menu operations", true);
         firebase.loadCurrentUser(user -> {
             vendor = user;
             if (user == null || !"vendor".equals(user.role)
                     || !("approved".equals(user.status) || "active".equals(user.status))) {
                 showBlocked();
             } else {
+                ensureStorefront();
                 buildForm();
                 listenToMenu();
             }
         });
     }
 
+    private void ensureStorefront() {
+        firebase.stores().child(vendor.uid).get().addOnCompleteListener(task -> {
+            if (task.isSuccessful() && task.getResult().exists()) return;
+            MarketplaceStore store = new MarketplaceStore();
+            store.id = vendor.uid;
+            store.ownerId = vendor.uid;
+            store.name = TextUtils.isEmpty(vendor.businessName) ? vendor.name : vendor.businessName;
+            store.cuisine = "Local marketplace vendor";
+            store.description = "Verified FoodMoboChain seller with protected ordering.";
+            store.location = TextUtils.isEmpty(vendor.location) ? "Dhaka" : vendor.location;
+            store.rating = vendor.rating > 0 ? vendor.rating : 4.5;
+            store.deliveryFee = 30;
+            store.minimumOrder = 100;
+            store.preparationMinutes = 25;
+            store.verified = true;
+            store.open = true;
+            store.featured = false;
+            store.createdAt = System.currentTimeMillis();
+            firebase.stores().child(vendor.uid).setValue(store);
+        });
+    }
+
     private void showBlocked() {
         content.removeAllViews();
         LinearLayout card = Ui.softCard(this);
-        card.addView(Ui.heading(this, "Menu access is locked"));
+        card.addView(Ui.heading(this, "Seller centre is locked"));
         card.addView(Ui.body(this, "Your vendor application must be approved by the administrator first."));
         content.addView(card);
     }
@@ -69,9 +94,16 @@ public class VendorMenuActivity extends BaseScreenActivity {
         content.removeAllViews();
         LinearLayout intro = Ui.softCard(this);
         intro.addView(Ui.label(this, "SELLER CENTRE"));
-        intro.addView(Ui.heading(this, "Create a menu customers can trust."));
+        intro.addView(Ui.heading(this, "Manage a real marketplace storefront."));
         intro.addView(Ui.body(this,
-                "Add a clear image, accurate price, preparation time and availability. Public HTTPS image links work on the free Spark plan."));
+                "Publish accurate prices, stock, public HTTPS images, preparation time and availability. Your storefront appears automatically in the store directory."));
+        Button previewStore = Ui.outlineButton(this, "Preview my storefront");
+        previewStore.setOnClickListener(v -> VendorStoreActivity.openStore(this, vendor.uid,
+                TextUtils.isEmpty(vendor.businessName) ? vendor.name : vendor.businessName));
+        intro.addView(previewStore);
+        Button analytics = Ui.outlineButton(this, "Open seller analytics");
+        analytics.setOnClickListener(v -> open(AnalyticsActivity.class));
+        intro.addView(analytics);
         content.addView(intro);
 
         LinearLayout form = Ui.card(this);
@@ -79,21 +111,23 @@ public class VendorMenuActivity extends BaseScreenActivity {
         name = Ui.input(this, "Food name");
         description = Ui.input(this, "Description and ingredients");
         description.setSingleLine(false);
-        price = Ui.numberInput(this, "Price in BDT");
+        price = Ui.numberInput(this, "Official checkout price in BDT");
         imageUrl = Ui.input(this, "Public HTTPS food image URL");
         preparationMinutes = Ui.numberInput(this, "Preparation time in minutes");
         deliveryFee = Ui.numberInput(this, "Delivery fee in BDT (0 for free)");
+        stockCount = Ui.numberInput(this, "Available portions");
         category = new android.widget.Spinner(this);
         category.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item,
-                Arrays.asList("Rice", "Traditional", "Street Food", "Fast Food", "Snacks",
-                        "Noodles", "Grill", "Drinks", "Dessert")));
+                Arrays.asList("Biryani", "Rice Meals", "Bengali Meals", "Traditional", "Street Food",
+                        "Dumplings", "Snacks", "Burgers", "Fast Food", "Noodles", "Chinese",
+                        "Pizza", "Pasta", "Grill", "BBQ", "Healthy Food", "Breakfast",
+                        "Dessert", "Cake", "Drinks", "Coffee", "Combo Meals")));
         category.setBackgroundResource(R.drawable.bg_input);
         LinearLayout.LayoutParams spinnerParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, Ui.dp(this, 54));
         spinnerParams.topMargin = Ui.dp(this, 10);
         category.setLayoutParams(spinnerParams);
         category.setPadding(Ui.dp(this, 12), 0, Ui.dp(this, 12), 0);
-
         available = new CheckBox(this);
         available.setText("Available for ordering");
         available.setChecked(true);
@@ -102,7 +136,6 @@ public class VendorMenuActivity extends BaseScreenActivity {
         featured = new CheckBox(this);
         featured.setText("Request featured placement");
         featured.setTextColor(getColor(R.color.brand_ink));
-
         save = Ui.button(this, "Publish item");
         save.setOnClickListener(v -> saveItem());
         form.addView(name);
@@ -111,6 +144,7 @@ public class VendorMenuActivity extends BaseScreenActivity {
         form.addView(imageUrl);
         form.addView(preparationMinutes);
         form.addView(deliveryFee);
+        form.addView(stockCount);
         form.addView(category);
         form.addView(available);
         form.addView(featured);
@@ -118,7 +152,7 @@ public class VendorMenuActivity extends BaseScreenActivity {
         content.addView(form);
 
         content.addView(Ui.spacer(this, 12));
-        content.addView(Ui.heading(this, "My published menu"));
+        content.addView(Ui.heading(this, "My published inventory"));
         list = new LinearLayout(this);
         list.setOrientation(LinearLayout.VERTICAL);
         content.addView(list);
@@ -137,42 +171,50 @@ public class VendorMenuActivity extends BaseScreenActivity {
             imageUrl.setError("Use a public https:// image link");
             return;
         }
-
         double value;
         double fee;
         int prep;
+        int stock;
         try {
             value = Double.parseDouble(amount);
             fee = TextUtils.isEmpty(deliveryFee.getText()) ? 0
                     : Double.parseDouble(deliveryFee.getText().toString().trim());
             prep = TextUtils.isEmpty(preparationMinutes.getText()) ? 20
                     : Integer.parseInt(preparationMinutes.getText().toString().trim());
+            stock = TextUtils.isEmpty(stockCount.getText()) ? 50
+                    : Integer.parseInt(stockCount.getText().toString().trim());
         } catch (NumberFormatException exception) {
-            Ui.toast(this, "Enter valid numbers for price, time and delivery fee.");
+            Ui.toast(this, "Enter valid numbers for price, time, delivery fee and stock.");
             return;
         }
-        if (value <= 0 || value > 100000 || fee < 0 || fee > 1000 || prep < 5 || prep > 180) {
-            Ui.toast(this, "Use a positive price, 5–180 minute preparation time and delivery fee up to ৳1,000.");
+        if (value <= 0 || value > 100000 || fee < 0 || fee > 1000
+                || prep < 5 || prep > 180 || stock < 0 || stock > 10000) {
+            Ui.toast(this, "Use valid price, 5–180 minute preparation, delivery fee up to ৳1,000 and stock up to 10,000.");
             return;
         }
-
         String id = editingId == null ? firebase.foods().push().getKey() : editingId;
         if (id == null || vendor == null) return;
         FoodItem item = new FoodItem();
         item.id = id;
         item.vendorId = vendor.uid;
+        item.storeId = vendor.uid;
         item.vendorName = TextUtils.isEmpty(vendor.businessName) ? vendor.name : vendor.businessName;
         item.name = foodName;
         item.description = details;
         item.price = value;
+        item.regularPrice = value;
         item.category = String.valueOf(category.getSelectedItem());
         item.imageUrl = image;
+        item.tags = item.category.toLowerCase(Locale.ROOT).replace(' ', ',');
         item.preparationMinutes = prep;
         item.deliveryFee = fee;
-        item.available = available.isChecked();
+        item.stockCount = stock;
+        item.available = available.isChecked() && stock > 0;
         item.featured = featured.isChecked();
         item.rating = editingRating;
         item.discountPercent = 0;
+        item.spicyLevel = 0;
+        item.vegetarian = false;
         item.createdAt = editingId == null ? System.currentTimeMillis() : editingCreatedAt;
         firebase.foods().child(id).setValue(item).addOnCompleteListener(task -> {
             Ui.toast(this, task.isSuccessful() ? "Menu item saved." : "Could not save the item: "
@@ -214,11 +256,12 @@ public class VendorMenuActivity extends BaseScreenActivity {
                 LinearLayout.LayoutParams.MATCH_PARENT, Ui.dp(this, 160)));
         ImageLoader.load(image, item.imageUrl, R.drawable.ic_food_plate);
         card.addView(image);
-        card.addView(Ui.label(this, item.available ? "AVAILABLE" : "PAUSED"));
+        card.addView(Ui.label(this, item.inStock() ? "IN STOCK" : "PAUSED OR SOLD OUT"));
         card.addView(Ui.title(this, item.name + "  •  " + Ui.money(item.price)));
         card.addView(Ui.body(this, item.category + " — " + item.description + "\n"
                 + (item.preparationMinutes > 0 ? item.preparationMinutes : 20) + " min prep  •  "
-                + (item.deliveryFee <= 0 ? "Free delivery" : Ui.money(item.deliveryFee) + " delivery")));
+                + (item.deliveryFee <= 0 ? "Free delivery" : Ui.money(item.deliveryFee) + " delivery")
+                + "  •  Stock " + item.stockCount));
         Button preview = Ui.button(this, "Preview customer view");
         preview.setOnClickListener(v -> FoodDetailActivity.open(this, item));
         card.addView(preview);
@@ -246,6 +289,7 @@ public class VendorMenuActivity extends BaseScreenActivity {
         imageUrl.setText(item.imageUrl == null ? "" : item.imageUrl);
         preparationMinutes.setText(String.valueOf(item.preparationMinutes > 0 ? item.preparationMinutes : 20));
         deliveryFee.setText(String.format(Locale.US, "%.0f", Math.max(0, item.deliveryFee)));
+        stockCount.setText(String.valueOf(Math.max(0, item.stockCount)));
         available.setChecked(item.available);
         featured.setChecked(item.featured);
         for (int i = 0; i < category.getCount(); i++) {
@@ -267,6 +311,7 @@ public class VendorMenuActivity extends BaseScreenActivity {
         imageUrl.setText("");
         preparationMinutes.setText("20");
         deliveryFee.setText("0");
+        stockCount.setText("50");
         available.setChecked(true);
         featured.setChecked(false);
         save.setText("Publish item");
