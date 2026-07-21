@@ -16,6 +16,11 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.FoodMoboChain"
         tools:targetApi="31">
+        <activity android:name=".ui.AnalyticsActivity" android:exported="false" />
+        <activity android:name=".ui.SupportActivity" android:exported="false" />
+        <activity android:name=".ui.AddressBookActivity" android:exported="false" />
+        <activity android:name=".ui.OffersActivity" android:exported="false" />
+        <activity android:name=".ui.StoresActivity" android:exported="false" />
         <activity android:name=".ui.NotificationsActivity" android:exported="false" />
         <activity android:name=".ui.FavoritesActivity" android:exported="false" />
         <activity android:name=".ui.VendorStoreActivity" android:exported="false" />
