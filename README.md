@@ -1,44 +1,52 @@
-# FoodMoboChain Android App
+# FoodMoboChain Android Marketplace
 
-FoodMoboChain v1.1.0 Spark Edition is a Java/XML Android marketplace MVP designed to run without a Firebase Blaze plan. It uses Firebase Authentication, Realtime Database, server-enforced Security Rules and App Check.
+FoodMoboChain v1.2.0 is a Java/XML Android food marketplace designed around Bangladesh's food-cart and youth-entrepreneur ecosystem. It combines a modern delivery-app customer experience with vendor operations, training, cart rentals and Firebase Spark-compatible security.
+
+## Marketplace experience
+
+- Foodpanda-inspired home with delivery location, promotion banner, categories and service shortcuts.
+- Search, category filtering, rating/price/preparation sorting and professional food imagery.
+- Detailed food screens with price, rating, preparation time, delivery information and quantity controls.
+- Persistent favourites and complete vendor storefronts.
+- Protected bag and vendor-specific checkout using official Firebase menu prices.
+- Visual live order tracking: placed → accepted → preparing → out for delivery → delivered.
+- Unified notifications for order progress and moderated community announcements.
 
 ## Roles
 
-- Buyer: browse food, manage a protected bag, place vendor-specific orders, track delivery and review completed transactions.
-- Vendor: apply, publish menu items after approval and move orders through the permitted delivery workflow.
-- Student: use ordering, rentals, training, newsfeed and profile features.
-- Admin: the verified `mdomor01815@gmail.com` account can approve vendors, moderate reports and create starter content.
+- **Buyer:** discover food, save favourites, manage a protected bag, place orders, track delivery and review completed transactions.
+- **Vendor:** apply for approval, operate a seller centre, publish image-rich menu listings and progress customer orders.
+- **Student:** use ordering, food-cart rentals, training, community news and profile tools.
+- **Admin:** the verified `mdomor01815@gmail.com` account approves vendors, moderates reports and creates the starter marketplace.
 
-## Spark-compatible features
+## Enterprise starter catalogue
+
+The administrator can create or refresh a complete demonstration marketplace containing popular meals, street foods, snacks, drinks and desserts, realistic preparation/delivery information, rental carts and announcement content. Food imagery uses remote public HTTPS media with an in-app memory cache and a local fallback illustration, so the app stays lightweight and does not require Firebase Storage.
+
+## Spark-compatible security
 
 - Email/password authentication, email verification and password reset.
-- Menu CRUD, availability, categories, search and official-price validation.
-- Canonical orders under Realtime Database, split by vendor before submission.
-- Immutable order items with totals calculated from rule-validated unit prices.
-- Controlled order progression: placed → accepted → preparing → out for delivery → delivered.
-- One deterministic review per order participant after delivery.
-- Rental requests with official daily pricing and atomic per-day reservation keys.
-- Public HTTPS links for tutorials and verification documents instead of Firebase Storage uploads.
-- Community newsfeed, reporting and administrator moderation.
-- App Check debug and Play Integrity providers.
+- Firebase App Check providers for debug and Play Integrity builds.
+- Realtime Database Security Rules verify identity, approved-vendor status, ownership and immutable fields.
+- Official-price validation for cart lines and order items.
+- Vendor-specific orders with restricted status progression.
+- One deterministic review per participant after delivery.
+- Atomic per-day food-cart rental reservations to prevent duplicate booking.
+- Public HTTPS links for images, tutorials and verification documents instead of Blaze-only Storage.
 
-## Security model
-
-The Android client is not trusted merely because it contains validation code. Realtime Database Security Rules independently check authenticated identity, verified email, administrator email, approved-vendor status, official menu prices, order ownership, allowed status transitions, delivered-order reviews and rental reservation ownership.
-
-This is a production-oriented MVP for controlled pilots and small deployments. A future high-scale commercial edition should add a paid trusted backend for payment processing, refunds, private document storage, audit pipelines and large-scale operations.
+The Android client is treated as untrusted. Sensitive marketplace rules are independently checked by Firebase Realtime Database Security Rules.
 
 ## Firebase setup
 
-Read `FIREBASE_SETUP.md`. The configured project is `foodmobochaindb-c36f5` and the package is `com.example.foodmobochain`.
+Read `FIREBASE_SETUP.md`. The configured Firebase project is `foodmobochaindb-c36f5`, the Android package is `com.example.foodmobochain`, and the explicit Singapore database endpoint is configured in `FirebaseService`.
 
-The Firebase Console must contain a default Realtime Database instance. Create it once under **Build → Realtime Database → Create database → Locked mode**, then run the manual **Deploy Spark Realtime Database rules** workflow. No Cloud Functions or Firebase Storage deployment is used.
+The project uses Firebase Authentication, Realtime Database and App Check without Cloud Functions or Firebase Storage. Keep App Check enforcement disabled for the direct-install debug APK until its debug token has been registered.
 
-## APK
+## Release
 
-The release workflow validates the Security Rules in the Firebase Emulator Suite, runs Android tests, builds the debug APK and publishes:
+The GitHub Actions release workflow validates the Security Rules in the Firebase Emulator Suite, runs Android tests, builds the APK and publishes:
 
-- Tag: `v1.1.0-spark`
-- APK: `FoodMoboChain-v1.1.0-Spark-debug.apk`
+- Tag: `v1.2.0-enterprise`
+- APK: `FoodMoboChain-v1.2.0-Enterprise-debug.apk`
 
-The APK is debug-signed and suitable for testing, academic evaluation and controlled pilot deployment. Cash on delivery is used; no card information is collected.
+The APK is debug-signed for direct installation and controlled real-user testing. Cash on delivery is used; the app does not collect payment-card information.

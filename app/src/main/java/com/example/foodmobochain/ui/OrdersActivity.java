@@ -2,14 +2,17 @@ package com.example.foodmobochain.ui;
 
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.view.Gravity;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.Spinner;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 
+import com.example.foodmobochain.R;
 import com.example.foodmobochain.data.SparkOperations;
 import com.example.foodmobochain.model.AppUser;
 import com.example.foodmobochain.model.CartLine;
@@ -35,7 +38,15 @@ public class OrdersActivity extends BaseScreenActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setupScreen("Orders & reviews", "Track transactions and build community trust", true);
+        setupScreen("Orders & tracking", "Live delivery progress and trusted reviews", true);
+
+        LinearLayout intro = Ui.softCard(this);
+        intro.addView(Ui.label(this, "REAL-TIME ORDER CENTRE"));
+        intro.addView(Ui.heading(this, "Know what is happening at every step."));
+        intro.addView(Ui.body(this,
+                "Order status changes are restricted to the approved vendor and appear here immediately."));
+        content.addView(intro);
+
         content.addView(Ui.heading(this, "My food orders"));
         buyerList = new LinearLayout(this);
         buyerList.setOrientation(LinearLayout.VERTICAL);
@@ -84,7 +95,8 @@ public class OrdersActivity extends BaseScreenActivity {
                         vendorView ? "No customer orders yet." : "You have not placed an order yet."));
             }
 
-            @Override public void onCancelled(@NonNull DatabaseError error) {
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
                 Ui.toast(OrdersActivity.this, error.getMessage());
             }
         };
@@ -92,18 +104,34 @@ public class OrdersActivity extends BaseScreenActivity {
 
     private LinearLayout orderCard(FoodOrder order, boolean vendorView) {
         LinearLayout card = Ui.card(this);
-        card.addView(Ui.label(this, order.status == null ? "PLACED" : order.status));
+        card.addView(Ui.label(this, order.status == null ? "PLACED" : order.status.replace('_', ' ')));
         card.addView(Ui.title(this, "Order " + shortId(order.id) + "  •  " + Ui.money(order.computedTotal())));
         card.addView(Ui.body(this, DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT)
                 .format(new Date(order.createdAt))));
-        if (vendorView) card.addView(Ui.body(this, "Buyer: " + order.buyerName + "\nDeliver to: " + order.address));
+
+        if (!"cancelled".equals(order.status)) card.addView(statusTimeline(order.status));
+        else {
+            TextView cancelled = Ui.title(this, "Order cancelled");
+            cancelled.setTextColor(getColor(R.color.brand_danger));
+            card.addView(cancelled);
+        }
+
+        card.addView(Ui.body(this, statusMessage(order.status)));
+        if (vendorView) card.addView(Ui.body(this,
+                "Buyer: " + order.buyerName + "\nDeliver to: " + order.address));
+        else card.addView(Ui.body(this, "Delivery address: " + order.address));
+
+        LinearLayout itemsCard = Ui.softCard(this);
+        itemsCard.addView(Ui.label(this, "ORDER SUMMARY"));
         if (order.items != null) {
             for (CartLine line : order.items.values()) {
                 if (line == null) continue;
-                card.addView(Ui.body(this, line.quantity + " × " + line.name + " — "
+                itemsCard.addView(Ui.body(this, line.quantity + " × " + line.name + " — "
                         + Ui.money(line.unitPrice * line.quantity)));
             }
         }
+        card.addView(itemsCard);
+
         String uid = firebase.uid();
         if (vendorView && uid != null && uid.equals(order.vendorId)) {
             if ("delivered".equals(order.status)) {
@@ -120,11 +148,58 @@ public class OrdersActivity extends BaseScreenActivity {
             }
         } else if (!vendorView && uid != null && uid.equals(order.buyerId)
                 && "delivered".equals(order.status)) {
-            Button review = Ui.outlineButton(this, "Rate this transaction");
+            Button review = Ui.button(this, "Rate this transaction");
             review.setOnClickListener(v -> showReviewDialog(order, "vendor"));
             card.addView(review);
         }
         return card;
+    }
+
+    private LinearLayout statusTimeline(String status) {
+        String[] labels = {"Placed", "Accepted", "Preparing", "On the way", "Delivered"};
+        int active = statusIndex(status);
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        rowParams.topMargin = Ui.dp(this, 14);
+        rowParams.bottomMargin = Ui.dp(this, 10);
+        row.setLayoutParams(rowParams);
+        for (int i = 0; i < labels.length; i++) {
+            LinearLayout step = new LinearLayout(this);
+            step.setOrientation(LinearLayout.VERTICAL);
+            step.setGravity(Gravity.CENTER);
+            step.setLayoutParams(new LinearLayout.LayoutParams(0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+            TextView dot = Ui.title(this, i <= active ? "●" : "○");
+            dot.setGravity(Gravity.CENTER);
+            dot.setTextColor(getColor(i <= active ? R.color.brand_green : R.color.brand_muted));
+            TextView label = Ui.text(this, labels[i], 9,
+                    i <= active ? R.color.brand_green_dark : R.color.brand_muted);
+            label.setGravity(Gravity.CENTER);
+            step.addView(dot);
+            step.addView(label);
+            row.addView(step);
+        }
+        return row;
+    }
+
+    private int statusIndex(String status) {
+        if ("accepted".equals(status)) return 1;
+        if ("preparing".equals(status)) return 2;
+        if ("out_for_delivery".equals(status)) return 3;
+        if ("delivered".equals(status)) return 4;
+        return 0;
+    }
+
+    private String statusMessage(String status) {
+        if ("accepted".equals(status)) return "The seller confirmed your order and will begin preparation soon.";
+        if ("preparing".equals(status)) return "Your food is being prepared. The next update will appear automatically.";
+        if ("out_for_delivery".equals(status)) return "Your food has left the seller and is travelling to the delivery address.";
+        if ("delivered".equals(status)) return "Delivered successfully. Share a review to help the community.";
+        if ("cancelled".equals(status)) return "This order will not progress further.";
+        return "The order is waiting for the seller to accept it.";
     }
 
     private String nextStatusLabel(String status) {

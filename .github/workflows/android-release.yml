@@ -1,4 +1,4 @@
-name: Build and publish Spark Edition APK
+name: Build and publish FoodMoboChain v1.2
 
 on:
   workflow_dispatch:
@@ -13,7 +13,7 @@ on:
       - ".github/workflows/android-release.yml"
 
 concurrency:
-  group: foodmobochain-spark-release
+  group: foodmobochain-v1-2-release
   cancel-in-progress: true
 
 permissions:
@@ -61,13 +61,13 @@ jobs:
           ./gradlew testDebugUnitTest assembleDebug --stacktrace
 
       - name: Prepare APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk FoodMoboChain-v1.1.0-Spark-debug.apk
+        run: cp app/build/outputs/apk/debug/app-debug.apk FoodMoboChain-v1.2.0-Enterprise-debug.apk
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: FoodMoboChain-v1.1.0-Spark-debug-apk
-          path: FoodMoboChain-v1.1.0-Spark-debug.apk
+          name: FoodMoboChain-v1.2.0-Enterprise-debug-apk
+          path: FoodMoboChain-v1.2.0-Enterprise-debug.apk
           if-no-files-found: error
 
       - name: Publish GitHub prerelease
@@ -75,36 +75,38 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           cat > release-notes.md <<'EOF'
-          FoodMoboChain v1.1.0 Spark Edition is a production-oriented MVP that runs without the Blaze plan.
+          FoodMoboChain v1.2.0 introduces a complete enterprise-style marketplace experience while remaining compatible with the Firebase Spark plan.
 
           Included:
-          - Firebase Authentication and email verification
-          - Realtime Database with server-enforced Security Rules
-          - App Check integration
-          - Price-validated vendor-specific orders
-          - Protected order status transitions and delivered-order reviews
-          - Atomic per-day food-cart rental reservations
-          - Verified-email administrator and vendor approval
-          - Public HTTPS links instead of Blaze-only Firebase Storage uploads
+          - Foodpanda-inspired marketplace home and discovery experience
+          - Professional food photography loaded through cached public HTTPS media
+          - Search, categories, sorting, favourites and vendor storefronts
+          - Rich food-detail pages with preparation and delivery information
+          - Protected cart and vendor-specific checkout
+          - Live visual order tracking from placed through delivered
+          - Unified order and announcement notifications
+          - Vendor seller centre with menu images, logistics and availability
+          - Administrator catalogue seeding, seller approval and moderation
+          - Food-cart rentals, training, newsfeed, profiles and verified reviews
+          - Firebase Authentication, App Check and server-enforced Realtime Database Security Rules
 
-          Before live testing, create the default Realtime Database in Firebase Console and deploy `firebase-database-rules.json`. This APK is debug-signed and intended for controlled pilots, testing and demonstration.
+          The APK is debug-signed for direct installation and controlled real-user testing. Keep App Check enforcement disabled until its debug token is registered.
           EOF
-          if gh release view v1.1.0-spark >/dev/null 2>&1; then
-            gh release upload v1.1.0-spark FoodMoboChain-v1.1.0-Spark-debug.apk --clobber
-            gh release edit v1.1.0-spark --notes-file release-notes.md
+          if gh release view v1.2.0-enterprise >/dev/null 2>&1; then
+            gh release upload v1.2.0-enterprise FoodMoboChain-v1.2.0-Enterprise-debug.apk --clobber
+            gh release edit v1.2.0-enterprise --notes-file release-notes.md --target "$GITHUB_SHA"
           else
-            gh release create v1.1.0-spark FoodMoboChain-v1.1.0-Spark-debug.apk \
+            gh release create v1.2.0-enterprise FoodMoboChain-v1.2.0-Enterprise-debug.apk \
               --target "$GITHUB_SHA" \
-              --title "FoodMoboChain v1.1.0 Spark Edition" \
+              --title "FoodMoboChain v1.2.0 Enterprise Marketplace" \
               --notes-file release-notes.md \
               --prerelease
           fi
 
-      - name: Mark Spark publication complete
+      - name: Record publication
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh issue view 3 >/dev/null 2>&1; then
-            gh issue comment 3 --body "FoodMoboChain v1.1.0 Spark Edition was validated, built and published as \`FoodMoboChain-v1.1.0-Spark-debug.apk\` by workflow run ${GITHUB_RUN_ID}. The remaining live-backend step is creating the default Realtime Database once and running the Spark rules deployment workflow."
-            gh issue close 3 --reason completed
-          fi
+          gh issue create \
+            --title "FoodMoboChain v1.2.0 published" \
+            --body "The enterprise marketplace APK was validated and published as \`FoodMoboChain-v1.2.0-Enterprise-debug.apk\` by workflow run ${GITHUB_RUN_ID}." || true
