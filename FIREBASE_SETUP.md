@@ -1,27 +1,16 @@
 # Firebase Spark setup
 
-FoodMoboChain connects to Firebase project `foodmobochaindb-c36f5` with Android package `com.example.foodmobochain`.
+FoodMoboChain v1.3 uses Firebase project `foodmobochaindb-c36f5`, Android package `com.example.foodmobochain`, and the Singapore Realtime Database endpoint.
 
-## 1. Enable free Firebase products
+## Firebase products
 
-In Firebase Console:
+The application uses Email/Password Authentication, Realtime Database and App Check. Cloud Functions and Firebase Storage are not required. Public HTTPS media links and cash on delivery keep the project compatible with the Spark plan.
 
-1. Authentication → Sign-in method → enable Email/Password.
-2. Build → Realtime Database → Create database.
-3. Choose an appropriate nearby region and start in Locked mode.
-4. App Check → register the Android app.
+## Deploy Security Rules
 
-Cloud Functions and Firebase Storage are not required by Spark Edition.
+The GitHub Actions workflow **Deploy Spark Realtime Database rules** runs automatically when the rules file is merged into `main`. It may also be started manually from the repository Actions page.
 
-## 2. Deploy Realtime Database rules
-
-A fresh Firebase project must have its default Realtime Database created once in the Console before rules can be deployed.
-
-The repository contains the secret `FIREBASE_SERVICE_ACCOUNT_JSON`. After the database exists, open GitHub Actions and run:
-
-**Deploy Spark Realtime Database rules**
-
-Local alternative:
+Local validation:
 
 ```bash
 npm install --prefix functions --no-audit --no-fund
@@ -29,51 +18,49 @@ npm install --prefix functions --no-audit --no-fund
   --only database \
   "npm --prefix functions test" \
   --project demo-foodmobo
+```
 
+Local deployment:
+
+```bash
 firebase login
 firebase use foodmobochaindb-c36f5
 firebase deploy --only database
 ```
 
-## 3. Administrator
+## Administrator
 
-The verified Firebase Authentication account `mdomor01815@gmail.com` is the administrator. On sign-in, the app synchronizes its profile to role `admin`; Security Rules independently verify the email and `email_verified` token before permitting administrator operations.
+The verified Authentication account `mdomor01815@gmail.com` is the administrator. Security Rules independently verify the email and verified-email token before allowing administrator operations.
 
-Do not change the administrator email in only one place. Keep these synchronized:
+Keep the administrator email synchronized in `FirebaseService.ADMIN_EMAIL` and `firebase-database-rules.json`.
 
-- `FirebaseService.ADMIN_EMAIL`
-- `firebase-database-rules.json`
+## Create the large starter marketplace
 
-## 4. Vendor approval
+After installing v1.3:
 
-1. A vendor registers and verifies their email.
-2. Their profile starts with status `pending`.
-3. The administrator opens Admin control and approves or rejects the application.
-4. An approved vendor can publish menu records whose `vendorId` matches their Firebase UID.
+1. Sign in with the verified administrator account.
+2. Open **Business workspace → Admin operations**.
+3. Tap **Create or refresh enterprise starter data**.
+4. Confirm creation.
 
-## 5. App Check
+The repeatable seed creates 12 stores, 72 foods, 22 categories, 8 campaigns, 10 delivery zones, 12 rental carts, 12 training resources and 20 community posts. Real users, real vendor foods, orders, reviews, addresses and support tickets are not removed.
 
-1. Register `com.example.foodmobochain` in Firebase App Check.
-2. Use Play Integrity for production-signed builds.
-3. For the debug APK, run once and copy the debug token from Logcat.
-4. Add the debug token in Firebase Console before enabling enforcement.
-5. Enable enforcement only after Authentication and Realtime Database flows have been tested.
+## Vendor storefront workflow
 
-## 6. Public media links
+1. A vendor registers and verifies the email.
+2. The administrator approves the pending application.
+3. Opening Seller Centre creates the vendor storefront under `stores/{uid}`.
+4. Published foods use the vendor UID as both owner and storefront ID.
+5. Security Rules prevent publishing into another vendor's store.
 
-Spark Edition does not upload files to Firebase Storage. Use public `https://` links for:
+## App Check
 
-- tutorial videos
-- profile verification documents
-- future food/news images
+Use Play Integrity for production-signed builds. For the direct-install debug APK, register its debug token before enabling enforcement. Keep enforcement disabled until login, saved addresses, support tickets, ordering and rentals have been tested.
 
-Do not use a public link for sensitive identity documents in a real commercial deployment. A paid private storage and review workflow should be added before collecting sensitive documents.
+## Public media
 
-## 7. Android Studio
+Use public `https://` links for food images, store banners and tutorials. Do not expose identity documents or private files through public links.
 
-1. Open the folder containing `settings.gradle.kts`.
-2. Use JDK 17.
-3. Install Android SDK 36 when prompted.
-4. Sync Gradle and run on API 24 or newer.
+## Android Studio
 
-Never commit service-account keys, signing keystores, passwords or private user documents.
+Use JDK 17, Android SDK 36 and Android API 24 or newer. Never commit credentials, signing files, passwords or private user documents.
