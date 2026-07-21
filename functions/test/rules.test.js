@@ -34,6 +34,8 @@ beforeEach(async () => {
     await set(ref(db, "users/buyer-1"), profile("buyer-1", "buyer@example.com", "buyer", "active"));
     await set(ref(db, "users/vendor-1"), profile("vendor-1", "vendor@example.com", "vendor", "approved"));
     await set(ref(db, "users/vendor-2"), profile("vendor-2", "vendor2@example.com", "vendor", "pending"));
+    await set(ref(db, "vendorApplications/vendor-2"),
+        profile("vendor-2", "vendor2@example.com", "vendor", "pending"));
     await set(ref(db, "foods/food-1"), food("food-1", "vendor-1", 100));
     await set(ref(db, "rentalCarts/cart-1"), {
       id: "cart-1",
