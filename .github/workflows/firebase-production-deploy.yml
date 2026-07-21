@@ -48,10 +48,11 @@ jobs:
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-service-account.json
         run: |
+          set -o pipefail
           ./functions/node_modules/.bin/firebase deploy \
             --only database \
             --project "$FIREBASE_PROJECT_ID" \
-            --non-interactive
+            --non-interactive 2>&1 | tee database-deploy.log
 
       - name: Mark Spark backend active
         if: success()
@@ -62,12 +63,25 @@ jobs:
             gh issue comment 8 --body "Spark Realtime Database rules were validated and deployed successfully by workflow run ${GITHUB_RUN_ID}."
             gh issue close 8 --reason completed
           fi
+          if gh issue view 9 >/dev/null 2>&1; then
+            gh issue comment 9 --body "Resolved by successful workflow run ${GITHUB_RUN_ID}."
+            gh issue close 9 --reason completed
+          fi
 
       - name: Report production rules failure
         if: failure() && steps.deploy.outcome == 'failure'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh issue create \
-            --title "Spark Realtime Database rules deployment failed" \
-            --body "The rules passed emulator validation but production deployment failed. Review workflow run ${GITHUB_RUN_ID} for the exact Firebase error." || true
+          {
+            echo "Deployment failed in workflow run ${GITHUB_RUN_ID}."
+            echo
+            echo '```text'
+            tail -n 160 database-deploy.log 2>/dev/null || true
+            echo '```'
+          } > /tmp/database-deploy-failure.md
+          if gh issue view 9 >/dev/null 2>&1; then
+            gh issue comment 9 --body-file /tmp/database-deploy-failure.md
+          else
+            gh issue create --title "Spark Realtime Database rules deployment failed" --body-file /tmp/database-deploy-failure.md
+          fi
