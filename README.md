@@ -1,52 +1,71 @@
 # FoodMoboChain Android Marketplace
 
-FoodMoboChain v1.2.0 is a Java/XML Android food marketplace designed around Bangladesh's food-cart and youth-entrepreneur ecosystem. It combines a modern delivery-app customer experience with vendor operations, training, cart rentals and Firebase Spark-compatible security.
+FoodMoboChain v1.3.0 Large Marketplace is a Java/XML Android food ecosystem for Bangladesh. It combines multi-store ordering, youth entrepreneurship, food-cart rentals, training and community support while remaining compatible with the Firebase Spark plan.
 
-## Marketplace experience
+## Large marketplace data
 
-- Foodpanda-inspired home with delivery location, promotion banner, categories and service shortcuts.
-- Search, category filtering, rating/price/preparation sorting and professional food imagery.
-- Detailed food screens with price, rating, preparation time, delivery information and quantity controls.
-- Persistent favourites and complete vendor storefronts.
-- Protected bag and vendor-specific checkout using official Firebase menu prices.
-- Visual live order tracking: placed → accepted → preparing → out for delivery → delivered.
-- Unified notifications for order progress and moderated community announcements.
+The verified administrator can safely create or refresh a repeatable starter marketplace without deleting real users or vendor records:
 
-## Roles
+- 12 marketplace stores
+- 72 food items with authoritative prices, regular prices, stock, tags, ratings and preparation times
+- 22 food categories
+- 8 active promotional campaigns
+- 10 delivery zones
+- 12 rentable food carts
+- 12 training resources
+- 20 community announcements
 
-- **Buyer:** discover food, save favourites, manage a protected bag, place orders, track delivery and review completed transactions.
-- **Vendor:** apply for approval, operate a seller centre, publish image-rich menu listings and progress customer orders.
-- **Student:** use ordering, food-cart rentals, training, community news and profile tools.
-- **Admin:** the verified `mdomor01815@gmail.com` account approves vendors, moderates reports and creates the starter marketplace.
+Public HTTPS media is loaded with an in-memory cache and local fallback artwork, so Firebase Storage is not required.
 
-## Enterprise starter catalogue
+## Customer experience
 
-The administrator can create or refresh a complete demonstration marketplace containing popular meals, street foods, snacks, drinks and desserts, realistic preparation/delivery information, rental carts and announcement content. Food imagery uses remote public HTTPS media with an in-app memory cache and a local fallback illustration, so the app stays lightweight and does not require Firebase Storage.
+- Food-delivery home with stores, campaigns, featured foods and active-order tracking.
+- Store directory and complete store-specific menu pages.
+- Search by food, store, category, description and tags.
+- Sorting by rating, discount, price and preparation speed.
+- Detailed food pages with stock, dietary information, spice level, list price and official checkout price.
+- Persistent favourites and stock-aware carts.
+- Saved home, work and campus delivery addresses.
+- Store-split cash-on-delivery checkout with delivery instructions.
+- Six-stage tracking: placed → accepted → preparing → packed → out for delivery → delivered.
+- Reviews only after completed delivery.
+- Notifications, newsfeed and trackable support tickets.
 
-## Spark-compatible security
+## Vendor and administrator operations
 
-- Email/password authentication, email verification and password reset.
+- Approved vendors automatically receive a verified storefront.
+- Seller centre supports public food images, official prices, stock, preparation time, delivery fee and availability.
+- Vendor analytics show order volume, completion and delivered value.
+- Administrator operations include vendor approval, moderation and large-data creation.
+- Administrator analytics cover users, stores, foods, orders, rentals and support tickets.
+- Support tickets preserve the customer message, administrator reply and status.
+
+## Firebase Spark security
+
+- Email/password Authentication and verified-email access.
 - Firebase App Check providers for debug and Play Integrity builds.
-- Realtime Database Security Rules verify identity, approved-vendor status, ownership and immutable fields.
-- Official-price validation for cart lines and order items.
-- Vendor-specific orders with restricted status progression.
-- One deterministic review per participant after delivery.
-- Atomic per-day food-cart rental reservations to prevent duplicate booking.
-- Public HTTPS links for images, tutorials and verification documents instead of Blaze-only Storage.
+- Realtime Database Security Rules independently verify ownership, roles and immutable fields.
+- Store and food ownership validation for approved vendors.
+- Official-price and stock validation for cart lines and order items.
+- Restricted order-status progression including the packed stage.
+- Owner-only saved addresses.
+- User-created support tickets with administrator-only replies.
+- Atomic per-day rental reservations.
+- Public HTTPS links instead of Blaze-only Firebase Storage.
 
-The Android client is treated as untrusted. Sensitive marketplace rules are independently checked by Firebase Realtime Database Security Rules.
+The Android client is treated as untrusted. Security-sensitive business rules are enforced by Firebase Realtime Database Rules and tested with the Firebase Emulator Suite.
 
 ## Firebase setup
 
-Read `FIREBASE_SETUP.md`. The configured Firebase project is `foodmobochaindb-c36f5`, the Android package is `com.example.foodmobochain`, and the explicit Singapore database endpoint is configured in `FirebaseService`.
+Read `FIREBASE_SETUP.md`. The configured project is `foodmobochaindb-c36f5`, package is `com.example.foodmobochain`, and the Singapore Realtime Database endpoint is configured explicitly in `FirebaseService`.
 
-The project uses Firebase Authentication, Realtime Database and App Check without Cloud Functions or Firebase Storage. Keep App Check enforcement disabled for the direct-install debug APK until its debug token has been registered.
+The project uses Authentication, Realtime Database and App Check without Cloud Functions or Firebase Storage. Keep App Check enforcement disabled for the direct-install debug APK until its debug token is registered.
 
 ## Release
 
-The GitHub Actions release workflow validates the Security Rules in the Firebase Emulator Suite, runs Android tests, builds the APK and publishes:
+GitHub Actions validates all Security Rules tests, runs Android unit tests, builds the debug APK and publishes:
 
-- Tag: `v1.2.0-enterprise`
-- APK: `FoodMoboChain-v1.2.0-Enterprise-debug.apk`
+- Tag: `v1.3.0-large-marketplace`
+- APK: `FoodMoboChain-v1.3.0-Large-Marketplace-debug.apk`
 
-The APK is debug-signed for direct installation and controlled real-user testing. Cash on delivery is used; the app does not collect payment-card information.
+The APK is debug-signed for direct installation and controlled real-user testing. Cash on delivery is used; no payment-card data is collected.
