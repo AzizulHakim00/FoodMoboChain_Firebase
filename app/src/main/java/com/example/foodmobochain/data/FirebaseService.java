@@ -38,9 +38,13 @@ public final class FirebaseService {
     }
 
     public DatabaseReference users() { return root.child("users"); }
+    public DatabaseReference stores() { return root.child("stores"); }
+    public DatabaseReference banners() { return root.child("banners"); }
     public DatabaseReference foods() { return root.child("foods"); }
     public DatabaseReference carts() { return root.child("carts"); }
     public DatabaseReference orders() { return root.child("orders"); }
+    public DatabaseReference addresses() { return root.child("addresses"); }
+    public DatabaseReference supportTickets() { return root.child("supportTickets"); }
     public DatabaseReference rentalCarts() { return root.child("rentalCarts"); }
     public DatabaseReference rentalBookings() { return root.child("rentalBookings"); }
     public DatabaseReference rentalReservations() { return root.child("rentalReservations"); }
