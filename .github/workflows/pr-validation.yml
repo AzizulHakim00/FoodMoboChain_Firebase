@@ -17,7 +17,24 @@ jobs:
       - name: Install Firebase test tools
         run: npm install --prefix functions --no-audit --no-fund
       - name: Validate Realtime Database rules
-        run: ./functions/node_modules/.bin/firebase emulators:exec --only database "npm --prefix functions test" --project demo-foodmobo
+        id: rules
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          ./functions/node_modules/.bin/firebase emulators:exec \
+            --only database \
+            "npm --prefix functions test" \
+            --project demo-foodmobo 2>&1 | tee rules-output.log
+      - name: Upload rules diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spark-rules-output
+          path: rules-output.log
+          if-no-files-found: error
+      - name: Stop failed rules validation
+        if: steps.rules.outcome == 'failure'
+        run: exit 1
 
   android-tests:
     runs-on: ubuntu-latest
