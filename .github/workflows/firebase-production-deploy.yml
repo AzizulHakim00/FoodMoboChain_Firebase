@@ -2,13 +2,18 @@ name: Deploy Spark Realtime Database rules
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "firebase-database-rules.json"
+      - ".github/workflows/firebase-production-deploy.yml"
 
 permissions:
   contents: read
   issues: write
 
 env:
-  FIREBASE_PROJECT_ID: foodmobochaindb-c36f5
+  FIREBASE_PROJECT_ID: foodmobochainbd-c36f5
 
 jobs:
   deploy-database-rules:
@@ -54,5 +59,5 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh issue create \
-            --title "Create the default Realtime Database before deploying Spark rules" \
-            --body "The Spark rules are validated, but Firebase cannot deploy them until the default Realtime Database is created once in Firebase Console: Build → Realtime Database → Create database → Locked mode. No Blaze upgrade is required for this Spark workflow." || true
+            --title "Spark Realtime Database rules deployment failed" \
+            --body "The rules passed emulator validation but production deployment failed. Review this workflow run for the exact Firebase error." || true
