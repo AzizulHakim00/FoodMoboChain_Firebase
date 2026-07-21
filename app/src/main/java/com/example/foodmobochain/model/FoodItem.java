@@ -37,6 +37,6 @@ public class FoodItem {
     }
 
     public boolean inStock() {
-        return available && stockCount != 0;
+        return available;
     }
 }
