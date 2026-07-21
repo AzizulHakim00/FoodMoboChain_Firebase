@@ -13,7 +13,7 @@ permissions:
   issues: write
 
 env:
-  FIREBASE_PROJECT_ID: foodmobochainbd-c36f5
+  FIREBASE_PROJECT_ID: foodmobochaindb-c36f5
 
 jobs:
   deploy-database-rules:
