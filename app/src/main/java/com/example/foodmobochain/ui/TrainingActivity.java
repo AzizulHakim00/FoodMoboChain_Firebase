@@ -10,8 +10,6 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 
 import com.example.foodmobochain.model.AppUser;
@@ -20,7 +18,6 @@ import com.example.foodmobochain.util.Ui;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.ValueEventListener;
-import com.google.firebase.storage.StorageReference;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -32,49 +29,42 @@ public class TrainingActivity extends BaseScreenActivity {
     private EditText title;
     private EditText topic;
     private EditText description;
-    private Button chooseVideo;
-    private Button upload;
+    private EditText videoUrl;
+    private Button publish;
     private LinearLayout list;
     private EditText search;
     private final List<TrainingResource> allResources = new ArrayList<>();
-    private Uri selectedVideo;
-
-    private final ActivityResultLauncher<String> videoPicker = registerForActivityResult(
-            new ActivityResultContracts.GetContent(), uri -> {
-                selectedVideo = uri;
-                chooseVideo.setText(uri == null ? "Choose tutorial video" : "Video selected ✓");
-            });
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setupScreen("Free training", "Food safety, service and entrepreneurship", true);
         firebase.loadCurrentUser(user -> currentUser = user);
-        buildUploadForm();
+        buildPublishForm();
         listenToTraining();
     }
 
-    private void buildUploadForm() {
+    private void buildPublishForm() {
         LinearLayout intro = Ui.softCard(this);
         intro.addView(Ui.label(this, "LEARN WITHOUT COST"));
         intro.addView(Ui.heading(this, "Skills for a stronger food business."));
-        intro.addView(Ui.body(this, "All verified users can contribute a useful tutorial video. Content can be flagged and moderated by the admin."));
+        intro.addView(Ui.body(this,
+                "Verified users can share a public YouTube or HTTPS tutorial link. Content can be flagged and moderated."));
         content.addView(intro);
 
         LinearLayout form = Ui.card(this);
-        form.addView(Ui.label(this, "UPLOAD A TUTORIAL"));
+        form.addView(Ui.label(this, "SHARE A TUTORIAL LINK"));
         title = Ui.input(this, "Tutorial title");
         topic = Ui.input(this, "Topic (food safety, service, finance…)");
         description = Ui.input(this, "Short description");
-        chooseVideo = Ui.outlineButton(this, "Choose tutorial video");
-        chooseVideo.setOnClickListener(v -> videoPicker.launch("video/*"));
-        upload = Ui.button(this, "Upload tutorial");
-        upload.setOnClickListener(v -> uploadTutorial());
+        videoUrl = Ui.input(this, "YouTube or public video URL");
+        publish = Ui.button(this, "Publish tutorial link");
+        publish.setOnClickListener(v -> publishTutorial());
         form.addView(title);
         form.addView(topic);
         form.addView(description);
-        form.addView(chooseVideo);
-        form.addView(upload);
+        form.addView(videoUrl);
+        form.addView(publish);
         content.addView(form);
         content.addView(Ui.spacer(this, 14));
         content.addView(Ui.heading(this, "Tutorial library"));
@@ -90,44 +80,40 @@ public class TrainingActivity extends BaseScreenActivity {
         content.addView(list);
     }
 
-    private void uploadTutorial() {
+    private void publishTutorial() {
         String titleValue = title.getText().toString().trim();
         String topicValue = topic.getText().toString().trim();
         String descriptionValue = description.getText().toString().trim();
+        String urlValue = videoUrl.getText().toString().trim();
         String uid = firebase.uid();
         if (uid == null || currentUser == null) return;
         if (TextUtils.isEmpty(titleValue) || TextUtils.isEmpty(topicValue)
-                || TextUtils.isEmpty(descriptionValue) || selectedVideo == null) {
-            Ui.toast(this, "Complete all fields and choose a video.");
+                || TextUtils.isEmpty(descriptionValue) || TextUtils.isEmpty(urlValue)) {
+            Ui.toast(this, "Complete all fields and add a video link.");
+            return;
+        }
+        if (!isWebUrl(urlValue)) {
+            videoUrl.setError("Use a public http:// or https:// link");
             return;
         }
         String id = firebase.training().push().getKey();
         if (id == null) return;
-        setUploading(true);
-        StorageReference file = firebase.storage.child("tutorials").child(uid).child(id);
-        file.putFile(selectedVideo).continueWithTask(task -> {
-            if (!task.isSuccessful()) throw task.getException();
-            return file.getDownloadUrl();
-        }).addOnCompleteListener(task -> {
-            if (!task.isSuccessful() || task.getResult() == null) {
-                setUploading(false);
-                Ui.toast(this, "Video upload failed.");
-                return;
-            }
-            TrainingResource resource = new TrainingResource();
-            resource.id = id;
-            resource.title = titleValue;
-            resource.topic = topicValue;
-            resource.description = descriptionValue;
-            resource.videoUrl = task.getResult().toString();
-            resource.uploaderId = uid;
-            resource.uploaderName = currentUser.name;
-            resource.createdAt = System.currentTimeMillis();
-            firebase.training().child(id).setValue(resource).addOnCompleteListener(saveTask -> {
-                setUploading(false);
-                Ui.toast(this, saveTask.isSuccessful() ? "Tutorial uploaded successfully." : "Tutorial metadata could not be saved.");
-                if (saveTask.isSuccessful()) clearForm();
-            });
+        setPublishing(true);
+        TrainingResource resource = new TrainingResource();
+        resource.id = id;
+        resource.title = titleValue;
+        resource.topic = topicValue;
+        resource.description = descriptionValue;
+        resource.videoUrl = urlValue;
+        resource.uploaderId = uid;
+        resource.uploaderName = currentUser.name;
+        resource.createdAt = System.currentTimeMillis();
+        firebase.training().child(id).setValue(resource).addOnCompleteListener(task -> {
+            setPublishing(false);
+            Ui.toast(this, task.isSuccessful()
+                    ? "Tutorial link published successfully."
+                    : "Tutorial could not be saved.");
+            if (task.isSuccessful()) clearForm();
         });
     }
 
@@ -162,7 +148,7 @@ public class TrainingActivity extends BaseScreenActivity {
             count++;
         }
         if (count == 0) list.addView(Ui.body(this,
-                query.isEmpty() ? "No tutorials have been uploaded yet." : "No tutorial matches this search."));
+                query.isEmpty() ? "No tutorials have been shared yet." : "No tutorial matches this search."));
     }
 
     private String value(String value) {
@@ -180,24 +166,27 @@ public class TrainingActivity extends BaseScreenActivity {
             try {
                 startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(resource.videoUrl)));
             } catch (Exception exception) {
-                Ui.toast(this, "No video app can open this tutorial.");
+                Ui.toast(this, "No app can open this tutorial link.");
             }
         });
         card.addView(watch);
         return card;
     }
 
-    private void setUploading(boolean busy) {
-        upload.setEnabled(!busy);
-        chooseVideo.setEnabled(!busy);
-        upload.setText(busy ? "Uploading…" : "Upload tutorial");
+    private void setPublishing(boolean busy) {
+        publish.setEnabled(!busy);
+        publish.setText(busy ? "Publishing…" : "Publish tutorial link");
     }
 
     private void clearForm() {
         title.setText("");
         topic.setText("");
         description.setText("");
-        selectedVideo = null;
-        chooseVideo.setText("Choose tutorial video");
+        videoUrl.setText("");
+    }
+
+    private boolean isWebUrl(String value) {
+        String lower = value.toLowerCase(Locale.ROOT);
+        return lower.startsWith("https://") || lower.startsWith("http://");
     }
 }
