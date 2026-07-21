@@ -1,49 +1,44 @@
 # FoodMoboChain Android App
 
-> The v1.1 security foundation is merged into `main`. Production Firebase deployment is tracked in issue #3; the public v1.0 APK remains active until that checklist is complete.
+FoodMoboChain v1.1.0 Spark Edition is a Java/XML Android marketplace MVP designed to run without a Firebase Blaze plan. It uses Firebase Authentication, Realtime Database, server-enforced Security Rules and App Check.
 
-FoodMoboChain is a Java/XML Android application based on the supplied SRS and the green/cream Food Mobo Chain design screens. It uses Firebase Authentication, Realtime Database, Storage, Cloud Functions and App Check.
+## Roles
 
-## Implemented roles
+- Buyer: browse food, manage a protected bag, place vendor-specific orders, track delivery and review completed transactions.
+- Vendor: apply, publish menu items after approval and move orders through the permitted delivery workflow.
+- Student: use ordering, rentals, training, newsfeed and profile features.
+- Admin: the verified `mdomor01815@gmail.com` account can approve vendors, moderate reports and create starter content.
 
-- Buyer: browse food, manage bag, place orders, track delivery, review vendors.
-- Vendor: submit an application, manage menu after approval, receive and update orders.
-- Student: use ordering, rentals, training, newsfeed, and profile features.
-- Admin: receives a server-issued custom claim from a configured verified account; approves vendors, moderates reports and seeds demonstration content.
+## Spark-compatible features
 
-## Implemented SRS features
+- Email/password authentication, email verification and password reset.
+- Menu CRUD, availability, categories, search and official-price validation.
+- Canonical orders under Realtime Database, split by vendor before submission.
+- Immutable order items with totals calculated from rule-validated unit prices.
+- Controlled order progression: placed → accepted → preparing → out for delivery → delivered.
+- One deterministic review per order participant after delivery.
+- Rental requests with official daily pricing and atomic per-day reservation keys.
+- Public HTTPS links for tutorials and verification documents instead of Firebase Storage uploads.
+- Community newsfeed, reporting and administrator moderation.
+- App Check debug and Play Integrity providers.
 
-- Email/password registration, verification, password reset, and 15-minute inactivity timeout.
-- Role-specific dashboard with server-issued administrator and approved-vendor custom claims.
-- Digital menu CRUD, categories, availability, search, and pricing.
-- Firebase bag plus trusted server-side checkout that recalculates official prices and creates one order per vendor.
-- Server-controlled order status workflow, immutable transaction reviews and automatic rating aggregation.
-- Trusted rental booking with official server-side pricing and overlap-safe date reservations.
-- Tutorial video upload and playback through Firebase Storage.
-- Community newsfeed, post creation, reporting, and admin moderation.
-- Editable personal/business profile and document upload.
-- Low-dependency Java/XML UI designed for API 24+ devices.
+## Security model
 
-## Security architecture
+The Android client is not trusted merely because it contains validation code. Realtime Database Security Rules independently check authenticated identity, verified email, administrator email, approved-vendor status, official menu prices, order ownership, allowed status transitions, delivered-order reviews and rental reservation ownership.
 
-The Android app is treated as an untrusted client. Cloud Functions handle checkout, rental reservations, vendor approval, status transitions, reviews and rating totals. Realtime Database and Storage rules deny direct client writes to protected records. Firebase App Check is initialized with the debug provider for debug builds and Play Integrity for release builds.
+This is a production-oriented MVP for controlled pilots and small deployments. A future high-scale commercial edition should add a paid trusted backend for payment processing, refunds, private document storage, audit pipelines and large-scale operations.
 
-## Important setup
+## Firebase setup
 
-Read `FIREBASE_SETUP.md` before running or deploying. Deploy Functions before the tightened Database and Storage rules. Firebase project ownership cannot be changed by editing Java code; the valid `google-services.json` must be downloaded while signed in to the intended Firebase account.
+Read `FIREBASE_SETUP.md`. The configured project is `foodmobochaindb-c36f5` and the package is `com.example.foodmobochain`.
 
-## Academic-version payment note
+The Firebase Console must contain a default Realtime Database instance. Create it once under **Build → Realtime Database → Create database → Locked mode**, then run the manual **Deploy Spark Realtime Database rules** workflow. No Cloud Functions or Firebase Storage deployment is used.
 
-Orders use cash on delivery. No real payment gateway or card data is collected. Firebase provides authenticated access controls plus encryption in transit and at rest; the project does not claim application-layer end-to-end encryption for payments.
+## APK
 
-## Download the Android app
+The release workflow validates the Security Rules in the Firebase Emulator Suite, runs Android tests, builds the debug APK and publishes:
 
-The current public developer-preview APK remains available from the `v1.0.0` GitHub prerelease. After the production Firebase checklist in issue #3 is completed, manually run the **Build and publish Android APK** workflow to publish `v1.1.0`.
+- Tag: `v1.1.0-spark`
+- APK: `FoodMoboChain-v1.1.0-Spark-debug.apk`
 
-- Current release: `https://github.com/AzizulHakim00/FoodMoboChain_Firebase/releases/tag/v1.0.0`
-- Current APK: `FoodMoboChain-v1.0.0-debug.apk`
-- Planned security preview: `FoodMoboChain-v1.1.0-debug.apk`
-
-## Automated validation
-
-Pull requests and security branches run backend unit tests, Firebase Realtime Database Rules tests in the Emulator Suite, Android unit tests and a debug APK build. The v1.1 merge passed all of these checks.
+The APK is debug-signed and suitable for testing, academic evaluation and controlled pilot deployment. Cash on delivery is used; no card information is collected.
