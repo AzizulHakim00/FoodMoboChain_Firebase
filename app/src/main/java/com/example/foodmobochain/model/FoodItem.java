@@ -7,15 +7,20 @@ public class FoodItem {
     public String id;
     public String vendorId;
     public String vendorName;
+    public String storeId;
     public String name;
     public String description;
     public String category;
     public String imageUrl;
+    public String tags;
     public double price;
     public double rating;
     public double deliveryFee;
     public double discountPercent;
     public int preparationMinutes;
+    public int stockCount;
+    public int spicyLevel;
+    public boolean vegetarian;
     public boolean available;
     public boolean featured;
     public long createdAt;
@@ -25,5 +30,9 @@ public class FoodItem {
     public double salePrice() {
         double discount = Math.max(0, Math.min(90, discountPercent));
         return price * (1d - discount / 100d);
+    }
+
+    public boolean inStock() {
+        return available && stockCount != 0;
     }
 }
