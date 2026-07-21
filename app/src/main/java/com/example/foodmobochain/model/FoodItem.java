@@ -14,6 +14,7 @@ public class FoodItem {
     public String imageUrl;
     public String tags;
     public double price;
+    public double regularPrice;
     public double rating;
     public double deliveryFee;
     public double discountPercent;
@@ -28,8 +29,11 @@ public class FoodItem {
     public FoodItem() { }
 
     public double salePrice() {
-        double discount = Math.max(0, Math.min(90, discountPercent));
-        return price * (1d - discount / 100d);
+        return price;
+    }
+
+    public double listPrice() {
+        return regularPrice > price ? regularPrice : price;
     }
 
     public boolean inStock() {
