@@ -6,6 +6,7 @@ import android.widget.LinearLayout;
 
 import androidx.annotation.NonNull;
 
+import com.example.foodmobochain.data.SparkOperations;
 import com.example.foodmobochain.model.AppUser;
 import com.example.foodmobochain.model.FoodItem;
 import com.example.foodmobochain.model.NewsPost;
@@ -30,7 +31,7 @@ public class AdminActivity extends BaseScreenActivity {
         setupScreen("Admin control", "Vendor approval and community moderation", true);
         firebase.loadCurrentUser(user -> {
             admin = user;
-            if (user == null || !"admin".equals(user.role)) {
+            if (user == null || !(firebase.isAdminUser() || "admin".equals(user.role))) {
                 content.addView(Ui.body(this, "This screen is restricted to the FoodMoboChain administrator."));
                 return;
             }
@@ -45,7 +46,8 @@ public class AdminActivity extends BaseScreenActivity {
         LinearLayout adminCard = Ui.softCard(this);
         adminCard.addView(Ui.label(this, "SYSTEM ADMINISTRATOR"));
         adminCard.addView(Ui.heading(this, "Keep the marketplace trustworthy."));
-        adminCard.addView(Ui.body(this, "Approve genuine vendors, resolve reported content and create sample data for the first demonstration."));
+        adminCard.addView(Ui.body(this,
+                "Admin access is protected by the verified administrator email in Realtime Database Security Rules."));
         Button seed = Ui.button(this, "Create starter food and rental data");
         seed.setOnClickListener(v -> seedData());
         adminCard.addView(seed);
@@ -98,17 +100,13 @@ public class AdminActivity extends BaseScreenActivity {
     }
 
     private void setVendorStatus(AppUser user, String status) {
-        Map<String, Object> request = new HashMap<>();
-        request.put("uid", user.uid);
-        request.put("status", status);
-        firebase.functions.getHttpsCallable("approveVendor").call(request)
-                .addOnCompleteListener(task -> Ui.toast(this, task.isSuccessful()
-                        ? "Vendor status and permissions updated."
-                        : "Could not update vendor: " + safeMessage(task.getException())));
+        SparkOperations.setVendorStatus(firebase, user, status, (result, error) -> Ui.toast(this,
+                error == null ? "Vendor status and permissions updated."
+                        : "Could not update vendor: " + safeMessage(error)));
     }
 
     private String safeMessage(Exception exception) {
-        return exception == null ? "Unknown server error." : exception.getLocalizedMessage();
+        return exception == null ? "Unknown database error." : exception.getLocalizedMessage();
     }
 
     private void listenFlags() {
@@ -159,7 +157,7 @@ public class AdminActivity extends BaseScreenActivity {
     }
 
     private void seedData() {
-        if (admin == null) return;
+        if (admin == null || !firebase.isAdminUser()) return;
         Map<String, Object> update = new HashMap<>();
         addFood(update, "sample-kacchi", "Kacchi Biryani", "Rice",
                 "Fragrant basmati rice, tender mutton, potato and house spices.", 320, 4.9);
