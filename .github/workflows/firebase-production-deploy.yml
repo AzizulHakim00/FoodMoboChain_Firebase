@@ -53,11 +53,21 @@ jobs:
             --project "$FIREBASE_PROJECT_ID" \
             --non-interactive
 
-      - name: Explain missing database instance
+      - name: Mark Spark backend active
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh issue view 8 >/dev/null 2>&1; then
+            gh issue comment 8 --body "Spark Realtime Database rules were validated and deployed successfully by workflow run ${GITHUB_RUN_ID}."
+            gh issue close 8 --reason completed
+          fi
+
+      - name: Report production rules failure
         if: failure() && steps.deploy.outcome == 'failure'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh issue create \
             --title "Spark Realtime Database rules deployment failed" \
-            --body "The rules passed emulator validation but production deployment failed. Review this workflow run for the exact Firebase error." || true
+            --body "The rules passed emulator validation but production deployment failed. Review workflow run ${GITHUB_RUN_ID} for the exact Firebase error." || true
