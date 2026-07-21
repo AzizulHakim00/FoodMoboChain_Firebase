@@ -12,6 +12,10 @@ on:
       - "functions/test/rules.test.js"
       - ".github/workflows/android-release.yml"
 
+concurrency:
+  group: foodmobochain-spark-release
+  cancel-in-progress: true
+
 permissions:
   contents: write
   issues: write
@@ -94,4 +98,13 @@ jobs:
               --title "FoodMoboChain v1.1.0 Spark Edition" \
               --notes-file release-notes.md \
               --prerelease
+          fi
+
+      - name: Mark Spark publication complete
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh issue view 3 >/dev/null 2>&1; then
+            gh issue comment 3 --body "FoodMoboChain v1.1.0 Spark Edition was validated, built and published as \`FoodMoboChain-v1.1.0-Spark-debug.apk\` by workflow run ${GITHUB_RUN_ID}. The remaining live-backend step is creating the default Realtime Database once and running the Spark rules deployment workflow."
+            gh issue close 3 --reason completed
           fi
