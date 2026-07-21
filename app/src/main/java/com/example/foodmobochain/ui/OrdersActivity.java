@@ -10,6 +10,7 @@ import android.widget.Spinner;
 
 import androidx.annotation.NonNull;
 
+import com.example.foodmobochain.data.SparkOperations;
 import com.example.foodmobochain.model.AppUser;
 import com.example.foodmobochain.model.CartLine;
 import com.example.foodmobochain.model.FoodOrder;
@@ -24,9 +25,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class OrdersActivity extends BaseScreenActivity {
     private AppUser currentUser;
@@ -46,7 +45,7 @@ public class OrdersActivity extends BaseScreenActivity {
         firebase.loadCurrentUser(user -> {
             currentUser = user;
             listenBuyerOrders();
-            if (user != null && ("vendor".equals(user.role) || "admin".equals(user.role))) {
+            if (user != null && ("vendor".equals(user.role) || firebase.isAdminUser())) {
                 content.addView(Ui.spacer(this, 18));
                 content.addView(Ui.heading(this, "Orders for my business"));
                 content.addView(vendorList);
@@ -58,13 +57,15 @@ public class OrdersActivity extends BaseScreenActivity {
     private void listenBuyerOrders() {
         String uid = firebase.uid();
         if (uid == null) return;
-        firebase.root.child("userOrders").child(uid).addValueEventListener(orderListener(buyerList, false));
+        firebase.orders().orderByChild("buyerId").equalTo(uid)
+                .addValueEventListener(orderListener(buyerList, false));
     }
 
     private void listenVendorOrders() {
         String uid = firebase.uid();
         if (uid == null) return;
-        firebase.vendorOrders().child(uid).addValueEventListener(orderListener(vendorList, true));
+        firebase.orders().orderByChild("vendorId").equalTo(uid)
+                .addValueEventListener(orderListener(vendorList, true));
     }
 
     private ValueEventListener orderListener(LinearLayout target, boolean vendorView) {
@@ -92,21 +93,22 @@ public class OrdersActivity extends BaseScreenActivity {
     private LinearLayout orderCard(FoodOrder order, boolean vendorView) {
         LinearLayout card = Ui.card(this);
         card.addView(Ui.label(this, order.status == null ? "PLACED" : order.status));
-        card.addView(Ui.title(this, "Order " + shortId(order.id) + "  •  " + Ui.money(order.total)));
+        card.addView(Ui.title(this, "Order " + shortId(order.id) + "  •  " + Ui.money(order.computedTotal())));
         card.addView(Ui.body(this, DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT)
                 .format(new Date(order.createdAt))));
         if (vendorView) card.addView(Ui.body(this, "Buyer: " + order.buyerName + "\nDeliver to: " + order.address));
         if (order.items != null) {
             for (CartLine line : order.items.values()) {
-                if (vendorView && currentUser != null && !currentUser.uid.equals(line.vendorId)) continue;
+                if (line == null) continue;
                 card.addView(Ui.body(this, line.quantity + " × " + line.name + " — "
                         + Ui.money(line.unitPrice * line.quantity)));
             }
         }
-        if (vendorView) {
+        String uid = firebase.uid();
+        if (vendorView && uid != null && uid.equals(order.vendorId)) {
             if ("delivered".equals(order.status)) {
                 Button reviewBuyer = Ui.outlineButton(this, "Rate this buyer");
-                reviewBuyer.setOnClickListener(v -> showReviewDialog(order, order.buyerId, "buyer"));
+                reviewBuyer.setOnClickListener(v -> showReviewDialog(order, "buyer"));
                 card.addView(reviewBuyer);
             } else {
                 String label = nextStatusLabel(order.status);
@@ -116,16 +118,10 @@ public class OrdersActivity extends BaseScreenActivity {
                     card.addView(status);
                 }
             }
-        } else if ("delivered".equals(order.status)) {
+        } else if (!vendorView && uid != null && uid.equals(order.buyerId)
+                && "delivered".equals(order.status)) {
             Button review = Ui.outlineButton(this, "Rate this transaction");
-            review.setOnClickListener(v -> {
-                String vendorId = firstVendor(order);
-                if (vendorId == null) {
-                    Ui.toast(this, "This order has no vendor information.");
-                } else {
-                    showReviewDialog(order, vendorId, "vendor");
-                }
-            });
+            review.setOnClickListener(v -> showReviewDialog(order, "vendor"));
             card.addView(review);
         }
         return card;
@@ -140,17 +136,12 @@ public class OrdersActivity extends BaseScreenActivity {
     }
 
     private void advanceStatus(FoodOrder order) {
-        if (order.id == null) return;
-        Map<String, Object> request = new HashMap<>();
-        request.put("orderId", order.id);
-        firebase.functions.getHttpsCallable("advanceOrderStatus").call(request)
-                .addOnCompleteListener(task -> Ui.toast(this, task.isSuccessful()
-                        ? "Order status updated securely."
-                        : "Could not update status: " + safeMessage(task.getException())));
+        SparkOperations.advanceOrderStatus(firebase, order, (status, error) -> Ui.toast(this,
+                error == null ? "Order status updated."
+                        : "Could not update status: " + safeMessage(error)));
     }
 
-    private void showReviewDialog(FoodOrder order, String targetUserId, String targetLabel) {
-        if (targetUserId == null) return;
+    private void showReviewDialog(FoodOrder order, String targetLabel) {
         LinearLayout form = new LinearLayout(this);
         form.setOrientation(LinearLayout.VERTICAL);
         form.setPadding(Ui.dp(this, 20), 0, Ui.dp(this, 20), 0);
@@ -172,30 +163,17 @@ public class OrdersActivity extends BaseScreenActivity {
     }
 
     private void submitReview(FoodOrder order, int stars, String comment) {
-        String uid = firebase.uid();
-        if (uid == null || TextUtils.isEmpty(comment)) {
-            Ui.toast(this, "Please add a short written review.");
+        if (TextUtils.isEmpty(comment) || comment.length() > 1000) {
+            Ui.toast(this, "Add a written review of no more than 1000 characters.");
             return;
         }
-        Map<String, Object> request = new HashMap<>();
-        request.put("orderId", order.id);
-        request.put("stars", stars);
-        request.put("comment", comment);
-        firebase.functions.getHttpsCallable("submitReview").call(request)
-                .addOnCompleteListener(task -> Ui.toast(this, task.isSuccessful()
-                        ? "Thank you. Your review was submitted securely."
-                        : "Review could not be saved: " + safeMessage(task.getException())));
+        SparkOperations.submitReview(firebase, order, stars, comment, (reviewId, error) -> Ui.toast(this,
+                error == null ? "Thank you. Your review was saved."
+                        : "Review could not be saved: " + safeMessage(error)));
     }
 
     private String safeMessage(Exception exception) {
-        return exception == null ? "Unknown server error." : exception.getLocalizedMessage();
-    }
-
-    private String firstVendor(FoodOrder order) {
-        if (order.vendorId != null) return order.vendorId;
-        if (order.items == null) return null;
-        for (CartLine line : order.items.values()) if (line.vendorId != null) return line.vendorId;
-        return null;
+        return exception == null ? "Unknown database error." : exception.getLocalizedMessage();
     }
 
     private String shortId(String id) {
