@@ -7,15 +7,12 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
-import com.google.firebase.functions.FirebaseFunctions;
-import com.google.firebase.storage.FirebaseStorage;
-import com.google.firebase.storage.StorageReference;
 
 public final class FirebaseService {
+    public static final String ADMIN_EMAIL = "mdomor01815@gmail.com";
+
     public final FirebaseAuth auth = FirebaseAuth.getInstance();
     public final DatabaseReference root = FirebaseDatabase.getInstance().getReference();
-    public final StorageReference storage = FirebaseStorage.getInstance().getReference();
-    public final FirebaseFunctions functions = FirebaseFunctions.getInstance();
 
     private static final FirebaseService INSTANCE = new FirebaseService();
 
@@ -32,13 +29,19 @@ public final class FirebaseService {
         return user == null ? null : user.getUid();
     }
 
+    public boolean isAdminUser() {
+        FirebaseUser user = firebaseUser();
+        return user != null && user.isEmailVerified() && user.getEmail() != null
+                && ADMIN_EMAIL.equalsIgnoreCase(user.getEmail().trim());
+    }
+
     public DatabaseReference users() { return root.child("users"); }
     public DatabaseReference foods() { return root.child("foods"); }
     public DatabaseReference carts() { return root.child("carts"); }
     public DatabaseReference orders() { return root.child("orders"); }
-    public DatabaseReference vendorOrders() { return root.child("vendorOrders"); }
     public DatabaseReference rentalCarts() { return root.child("rentalCarts"); }
     public DatabaseReference rentalBookings() { return root.child("rentalBookings"); }
+    public DatabaseReference rentalReservations() { return root.child("rentalReservations"); }
     public DatabaseReference training() { return root.child("training"); }
     public DatabaseReference newsfeed() { return root.child("newsfeed"); }
     public DatabaseReference reviews() { return root.child("reviews"); }
