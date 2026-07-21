@@ -28,7 +28,6 @@ import java.util.Locale;
 import java.util.Map;
 
 public class MainActivity extends BaseScreenActivity {
-    private AppUser currentUser;
     private LinearLayout featuredList;
     private LinearLayout vendorList;
     private LinearLayout activeOrderContainer;
@@ -53,7 +52,6 @@ public class MainActivity extends BaseScreenActivity {
             signOut();
             return;
         }
-        currentUser = user;
         addDeliveryHeader(user);
         addSearchAndPromotion();
         addServiceShortcuts();
@@ -66,10 +64,10 @@ public class MainActivity extends BaseScreenActivity {
         content.addView(featuredList);
 
         content.addView(Ui.spacer(this, 16));
-        content.addView(Ui.heading(this, "Popular local sellers"));
+        content.addView(Ui.heading(this, "Popular local stores"));
         vendorList = new LinearLayout(this);
         vendorList.setOrientation(LinearLayout.VERTICAL);
-        vendorList.addView(Ui.body(this, "Loading verified sellers…"));
+        vendorList.addView(Ui.body(this, "Loading verified stores…"));
         content.addView(vendorList);
 
         content.addView(Ui.spacer(this, 16));
@@ -87,15 +85,18 @@ public class MainActivity extends BaseScreenActivity {
     private void addDeliveryHeader(AppUser user) {
         LinearLayout header = Ui.card(this);
         header.addView(Ui.label(this, "DELIVER TO"));
-        header.addView(Ui.title(this, safe(user.location, "Set your delivery location")));
+        header.addView(Ui.title(this, safe(user.location, "Choose a saved delivery address")));
         header.addView(Ui.body(this, "Hello " + safe(user.name, "food explorer")
                 + "  •  " + (firebase.isAdminUser() ? "Administrator" : capitalise(user.role))));
         LinearLayout actions = new LinearLayout(this);
         actions.setOrientation(LinearLayout.HORIZONTAL);
+        Button addresses = compactAction("Addresses");
+        addresses.setOnClickListener(v -> open(AddressBookActivity.class));
         Button notifications = compactAction("Notifications");
         notifications.setOnClickListener(v -> open(NotificationsActivity.class));
         Button profile = compactAction("Profile");
         profile.setOnClickListener(v -> open(ProfileActivity.class));
+        actions.addView(addresses);
         actions.addView(notifications);
         actions.addView(profile);
         header.addView(actions);
@@ -103,42 +104,51 @@ public class MainActivity extends BaseScreenActivity {
     }
 
     private void addSearchAndPromotion() {
-        Button search = Ui.outlineButton(this, "⌕  Search foods, dishes or vendors");
+        Button search = Ui.outlineButton(this, "⌕  Search foods, stores or categories");
         search.setOnClickListener(v -> open(FoodCatalogActivity.class));
         content.addView(search);
 
         LinearLayout hero = Ui.softCard(this);
-        hero.addView(Ui.label(this, "WELCOME OFFER"));
+        hero.addView(Ui.label(this, "V1.3 LARGE MARKETPLACE"));
         ImageView illustration = new ImageView(this);
         illustration.setContentDescription("Food marketplace promotion");
         illustration.setLayoutParams(new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, Ui.dp(this, 150)));
+                LinearLayout.LayoutParams.MATCH_PARENT, Ui.dp(this, 165)));
         ImageLoader.load(illustration,
-                "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1200&q=80",
+                "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1400&q=82",
                 R.drawable.ic_food_plate);
         hero.addView(illustration);
-        hero.addView(Ui.heading(this, "Your city’s best street food,\none trusted marketplace."));
+        hero.addView(Ui.heading(this, "More stores. More foods.\nOne protected marketplace."));
         hero.addView(Ui.body(this,
-                "Browse verified sellers, compare delivery times, place protected orders and support young entrepreneurs."));
-        Button explore = Ui.button(this, "Explore food now");
-        explore.setOnClickListener(v -> open(FoodCatalogActivity.class));
+                "Explore store pages, live offers, saved addresses, support tickets, rentals, training and secure Firebase ordering."));
+        Button explore = Ui.button(this, "Explore all stores");
+        explore.setOnClickListener(v -> open(StoresActivity.class));
         hero.addView(explore);
+        Button offers = Ui.outlineButton(this, "View live offers");
+        offers.setOnClickListener(v -> open(OffersActivity.class));
+        hero.addView(offers);
         content.addView(hero);
     }
 
     private void addServiceShortcuts() {
-        content.addView(Ui.heading(this, "Your services"));
+        content.addView(Ui.heading(this, "Marketplace services"));
         addShortcutRow(
-                new Shortcut("Browse foods", "Menus and offers", FoodCatalogActivity.class),
+                new Shortcut("All stores", "Restaurants and carts", StoresActivity.class),
+                new Shortcut("Browse foods", "Search the full catalogue", FoodCatalogActivity.class));
+        addShortcutRow(
+                new Shortcut("Offers", "Live discounted prices", OffersActivity.class),
                 new Shortcut("My bag", "Checkout securely", BagActivity.class));
         addShortcutRow(
-                new Shortcut("Orders", "Live progress", OrdersActivity.class),
+                new Shortcut("Orders", "Live delivery progress", OrdersActivity.class),
                 new Shortcut("Favourites", "Saved dishes", FavoritesActivity.class));
         addShortcutRow(
-                new Shortcut("Rent a cart", "Start a business", RentalActivity.class),
-                new Shortcut("Free training", "Learn and certify", TrainingActivity.class));
+                new Shortcut("Saved addresses", "Home, work and campus", AddressBookActivity.class),
+                new Shortcut("Help & support", "Track support tickets", SupportActivity.class));
         addShortcutRow(
-                new Shortcut("Newsfeed", "Tips and offers", NewsfeedActivity.class),
+                new Shortcut("Rent a cart", "Start a business", RentalActivity.class),
+                new Shortcut("Free training", "Learn and grow", TrainingActivity.class));
+        addShortcutRow(
+                new Shortcut("Newsfeed", "Tips and announcements", NewsfeedActivity.class),
                 new Shortcut("Notifications", "Updates in one feed", NotificationsActivity.class));
     }
 
@@ -168,7 +178,7 @@ public class MainActivity extends BaseScreenActivity {
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER);
-        for (String category : new String[]{"Biryani", "Street food", "Burger", "Momo"}) {
+        for (String category : new String[]{"Biryani", "Street food", "Burgers", "Dessert"}) {
             Button button = compactAction(category);
             button.setOnClickListener(v -> open(FoodCatalogActivity.class));
             row.addView(button);
@@ -181,7 +191,7 @@ public class MainActivity extends BaseScreenActivity {
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, Ui.dp(this, 48), 1f);
         params.setMargins(Ui.dp(this, 3), Ui.dp(this, 6), Ui.dp(this, 3), 0);
         button.setLayoutParams(params);
-        button.setTextSize(12);
+        button.setTextSize(11);
         return button;
     }
 
@@ -190,20 +200,22 @@ public class MainActivity extends BaseScreenActivity {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 List<FoodItem> foods = new ArrayList<>();
-                Map<String, List<FoodItem>> vendors = new LinkedHashMap<>();
+                Map<String, List<FoodItem>> stores = new LinkedHashMap<>();
                 for (DataSnapshot child : snapshot.getChildren()) {
                     FoodItem item = child.getValue(FoodItem.class);
-                    if (item == null || !item.available) continue;
+                    if (item == null || !item.inStock()) continue;
                     if (item.id == null) item.id = child.getKey();
                     foods.add(item);
-                    if (item.vendorId != null) vendors
-                            .computeIfAbsent(item.vendorId, ignored -> new ArrayList<>()).add(item);
+                    String groupId = item.storeId == null || item.storeId.trim().isEmpty()
+                            ? item.vendorId : item.storeId;
+                    if (groupId != null) stores.computeIfAbsent(groupId,
+                            ignored -> new ArrayList<>()).add(item);
                 }
                 foods.sort(Comparator
                         .comparing((FoodItem item) -> !item.featured)
                         .thenComparing(Comparator.comparingDouble((FoodItem item) -> item.rating).reversed()));
                 renderFeatured(foods);
-                renderVendors(vendors);
+                renderStores(stores);
             }
 
             @Override
@@ -218,7 +230,7 @@ public class MainActivity extends BaseScreenActivity {
         featuredList.removeAllViews();
         int shown = 0;
         for (FoodItem item : foods) {
-            if (shown++ >= 5) break;
+            if (shown++ >= 6) break;
             LinearLayout card = Ui.card(this);
             ImageView image = new ImageView(this);
             image.setContentDescription(item.name + " image");
@@ -226,7 +238,10 @@ public class MainActivity extends BaseScreenActivity {
                     LinearLayout.LayoutParams.MATCH_PARENT, Ui.dp(this, 175)));
             ImageLoader.load(image, item.imageUrl, R.drawable.ic_food_plate);
             card.addView(image);
-            card.addView(Ui.label(this, item.featured ? "FEATURED" : item.category));
+            String badge = item.featured ? "FEATURED" : item.category;
+            if (item.discountPercent > 0) badge += "  •  "
+                    + String.format(Locale.US, "%.0f%% OFF", item.discountPercent);
+            card.addView(Ui.label(this, badge));
             card.addView(Ui.title(this, item.name));
             card.addView(Ui.body(this, item.vendorName + "  •  ★ "
                     + String.format(Locale.US, "%.1f", item.rating > 0 ? item.rating : 4.7)
@@ -239,34 +254,39 @@ public class MainActivity extends BaseScreenActivity {
             featuredList.addView(card);
         }
         if (foods.isEmpty()) featuredList.addView(Ui.body(this,
-                "No foods are published yet. The administrator can create starter content."));
-        Button all = Ui.outlineButton(this, "See all foods");
+                "No foods are published yet. The administrator can create the large starter marketplace."));
+        Button all = Ui.outlineButton(this, "See the complete food catalogue");
         all.setOnClickListener(v -> open(FoodCatalogActivity.class));
         featuredList.addView(all);
     }
 
-    private void renderVendors(Map<String, List<FoodItem>> vendors) {
+    private void renderStores(Map<String, List<FoodItem>> stores) {
         vendorList.removeAllViews();
         int shown = 0;
-        for (Map.Entry<String, List<FoodItem>> entry : vendors.entrySet()) {
-            if (shown++ >= 4 || entry.getValue().isEmpty()) break;
+        for (Map.Entry<String, List<FoodItem>> entry : stores.entrySet()) {
+            if (shown++ >= 6 || entry.getValue().isEmpty()) break;
             List<FoodItem> menu = entry.getValue();
             FoodItem first = menu.get(0);
             double totalRating = 0;
             for (FoodItem item : menu) totalRating += item.rating > 0 ? item.rating : 4.7;
             double rating = totalRating / menu.size();
             LinearLayout card = Ui.card(this);
-            card.addView(Ui.label(this, "VERIFIED LOCAL SELLER"));
-            card.addView(Ui.title(this, safe(first.vendorName, "FoodMoboChain Kitchen")));
+            card.addView(Ui.label(this, "VERIFIED MARKETPLACE STORE"));
+            card.addView(Ui.title(this, safe(first.vendorName, "FoodMoboChain Store")));
             card.addView(Ui.body(this, "★ " + String.format(Locale.US, "%.1f", rating)
-                    + "  •  " + menu.size() + " dishes  •  Order protected by Firebase rules"));
-            Button openStore = Ui.button(this, "View full menu");
-            openStore.setOnClickListener(v -> VendorStoreActivity.open(this,
-                    entry.getKey(), first.vendorName));
+                    + "  •  " + menu.size() + " available dishes  •  Protected checkout"));
+            Button openStore = Ui.button(this, "View full store menu");
+            String storeId = first.storeId == null || first.storeId.trim().isEmpty()
+                    ? first.vendorId : first.storeId;
+            openStore.setOnClickListener(v -> VendorStoreActivity.openStore(this,
+                    storeId, first.vendorName));
             card.addView(openStore);
             vendorList.addView(card);
         }
-        if (vendors.isEmpty()) vendorList.addView(Ui.body(this, "No active sellers yet."));
+        if (stores.isEmpty()) vendorList.addView(Ui.body(this, "No active stores yet."));
+        Button allStores = Ui.outlineButton(this, "Browse all stores");
+        allStores.setOnClickListener(v -> open(StoresActivity.class));
+        vendorList.addView(allStores);
     }
 
     private void listenLatestOrder() {
@@ -297,8 +317,9 @@ public class MainActivity extends BaseScreenActivity {
                         card.addView(Ui.label(MainActivity.this,
                                 selected.status == null ? "PLACED" : selected.status.replace('_', ' ')));
                         card.addView(Ui.title(MainActivity.this,
-                                "Order " + shortId(selected.id) + "  •  " + Ui.money(selected.computedTotal())));
-                        card.addView(Ui.body(MainActivity.this, statusMessage(selected.status)));
+                                safe(selected.storeName, "Store") + "  •  Order " + shortId(selected.id)));
+                        card.addView(Ui.body(MainActivity.this,
+                                Ui.money(selected.computedTotal()) + "\n" + statusMessage(selected.status)));
                         Button track = Ui.button(MainActivity.this, "Track order");
                         track.setOnClickListener(v -> open(OrdersActivity.class));
                         card.addView(track);
@@ -318,10 +339,12 @@ public class MainActivity extends BaseScreenActivity {
         content.addView(Ui.heading(this, "Business workspace"));
         if ("vendor".equals(user.role)) {
             if ("approved".equals(user.status) || "active".equals(user.status)) {
-                addBusinessAction("Manage my menu", "Publish images, prices, preparation times and availability.",
+                addBusinessAction("Seller centre", "Manage storefront, foods, images, stock and availability.",
                         VendorMenuActivity.class);
-                addBusinessAction("Customer orders", "Accept and progress orders through delivery.",
+                addBusinessAction("Customer orders", "Accept, prepare, pack and progress deliveries.",
                         OrdersActivity.class);
+                addBusinessAction("Seller analytics", "Review order volume and delivered sales value.",
+                        AnalyticsActivity.class);
             } else {
                 LinearLayout pending = Ui.softCard(this);
                 pending.addView(Ui.title(this, "Vendor approval pending"));
@@ -331,10 +354,13 @@ public class MainActivity extends BaseScreenActivity {
             }
         }
         if (firebase.isAdminUser() || "admin".equals(user.role)) {
-            addBusinessAction("Admin operations", "Approve vendors, moderate reports and seed marketplace content.",
+            addBusinessAction("Admin operations", "Approve vendors, seed large data and moderate the marketplace.",
                     AdminActivity.class);
+            addBusinessAction("Marketplace analytics", "Monitor users, stores, foods, orders, rentals and support.",
+                    AnalyticsActivity.class);
         }
         addBusinessAction("My profile", "Manage contact, business and location details.", ProfileActivity.class);
+        addBusinessAction("Help & support", "Create and track support conversations.", SupportActivity.class);
         Button signOut = Ui.outlineButton(this, "Sign out");
         signOut.setOnClickListener(v -> signOut());
         content.addView(signOut);
@@ -352,6 +378,7 @@ public class MainActivity extends BaseScreenActivity {
     private String statusMessage(String status) {
         if ("accepted".equals(status)) return "The seller accepted your order.";
         if ("preparing".equals(status)) return "Your meal is being prepared.";
+        if ("packed".equals(status)) return "Your order is packed and waiting for dispatch.";
         if ("out_for_delivery".equals(status)) return "The order is on the way to you.";
         return "Your order was placed and is waiting for seller confirmation.";
     }
