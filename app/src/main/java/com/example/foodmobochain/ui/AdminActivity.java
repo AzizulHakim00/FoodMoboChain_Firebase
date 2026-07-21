@@ -174,7 +174,7 @@ public class AdminActivity extends BaseScreenActivity {
         NewsPost post = new NewsPost();
         post.id = "welcome-post";
         post.authorId = admin.uid;
-        post.authorName = "Food Mobo Chain";
+        post.authorName = admin.name;
         post.authorRole = "admin";
         post.content = "Welcome to FoodMoboChain. Keep food safe, prices transparent and every customer respected.";
         post.createdAt = System.currentTimeMillis();
